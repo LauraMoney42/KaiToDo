@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "todoList",
-    "slug": "todoList",
+    "name": "Kaia To Do",
+    "slug": "KaiaToDo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -15,7 +15,8 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.laurac.money.KaiaToDo"
     },
     "android": {
       "adaptiveIcon": {
@@ -25,6 +26,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e12c1b34-09d1-466b-8116-3d4e6b714e46"
+      }
     }
   }
 }
