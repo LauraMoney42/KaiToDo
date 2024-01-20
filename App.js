@@ -2,6 +2,8 @@ import React, {useState} from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, Text, View, TextInput, Keyboard, KeyboardAvoidingView, TouchableOpacity, ScrollView } from 'react-native';
 import Task from './components/Task';
+import LottieView from 'lottie-react-native';
+import { useRef } from 'react';
 
 
 export default function App() {
