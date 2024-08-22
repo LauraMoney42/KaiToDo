@@ -1,8 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { Platform, StyleSheet, Text, View, TextInput, KeyboardAvoidingView, TouchableOpacity, ScrollView } from 'react-native';
 import Task from './components/Task';
 import LottieView from 'lottie-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
 
 export default function App() {
   const [task, setTask] = useState();
@@ -11,7 +14,8 @@ export default function App() {
   const confettiRef = useRef(null);
 
   function triggerConfetti() {
-    confettiRef.current?.play(0);
+    confettiRef.current?.reset(); // Reset the animation
+    confettiRef.current?.play(0); // Start the animation from the beginning
   }
 
   const handleAddTask = () => {
