@@ -1,87 +1,97 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { Platform, StyleSheet, Text, View, TextInput, KeyboardAvoidingView, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import { StyleSheet, View, Text, TextInput, KeyboardAvoidingView, TouchableOpacity, ScrollView } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Task from './components/Task';
 import LottieView from 'lottie-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-
-
 export default function App() {
-  const [task, setTask] = useState();
-  const [taskItems, setTaskItems] = useState([]);
-  const [showConfetti, setShowConfetti] = useState(false);
-  const confettiRef = useRef(null);
+  const [task, setTask] = React.useState('');
+  const [taskItems, setTaskItems] = React.useState([]);
+  const confettiRef = React.useRef(null);
 
-  function triggerConfetti() {
+  const triggerConfetti = () => {
     confettiRef.current?.reset(); // Reset the animation
     confettiRef.current?.play(0); // Start the animation from the beginning
-  }
+  };
 
   const handleAddTask = () => {
-    setTaskItems([...taskItems, task]);
-    setTask(null);
-  }
-
+    setTaskItems([...taskItems, { text: task, isCompleted: false }]);
+    setTask('');
+  };
+  
   const completeTask = (index) => {
+    let itemsCopy = [...taskItems];
+    // Toggle the completion state
+    itemsCopy[index].isCompleted = !itemsCopy[index].isCompleted;
+    setTaskItems(itemsCopy);
+    if (itemsCopy[index].isCompleted) {
+        triggerConfetti(); // Only trigger confetti when task is completed
+    }
+};
+
+  const deleteTask = (index) => {
     let itemsCopy = [...taskItems];
     itemsCopy.splice(index, 1);
     setTaskItems(itemsCopy);
-  }
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.contentContainer}>
-        <View style={styles.tasksWrapper}>
-          <Text style={styles.sectionTitle}>To Do</Text>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <View style={styles.contentContainer}>
+          <View style={styles.tasksWrapper}>
+            <Text style={styles.sectionTitle}>To Do</Text>
+          </View>
+
+          {/* Today's Tasks */}
+          <ScrollView style={styles.scrollView}>
+            <View style={styles.tasksWrapper}>
+              <View style={styles.items}>
+                {taskItems.map((item, index) => (
+                  <Task
+                    key={index}
+                    text={item.text}
+                    isCompleted={item.isCompleted}
+                    onToggleTask={() => completeTask(index)}
+                    onDeleteTask={() => deleteTask(index)}
+                  />
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          {/* Write a Task */}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.writeTaskWrapper}
+          >
+            <TextInput
+              style={styles.input}
+              placeholder={'Write a task'}
+              value={task}
+              onChangeText={text => setTask(text)}
+            />
+            <TouchableOpacity onPress={handleAddTask}>
+              <View style={styles.addWrapper}>
+                <Text style={styles.addText}>+</Text>
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
         </View>
 
-        {/*Today's Tasks */}
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.tasksWrapper}>
-            <View style={styles.items}>
-              {/*This is where tasks go*/}
-              {taskItems.map((item, index) => {
-                return (
-                  <TouchableOpacity key={index} onPress={() => { completeTask(index); triggerConfetti(); }}>
-                    <Task text={item} />
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Write a Task */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.writeTaskWrapper}
-        >
-          <TextInput
-            style={styles.input}
-            placeholder={'Write a task'}
-            value={task}
-            onChangeText={text => setTask(text)}
-          />
-          <TouchableOpacity onPress={handleAddTask}>
-            <View style={styles.addWrapper}>
-              <Text style={styles.addText}>+</Text>
-            </View>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
+        {/* Confetti Animation */}
+        <LottieView
+          ref={confettiRef}
+          source={require('./assets/confetti.json')}
+          autoPlay={false}
+          loop={false}
+          style={styles.lottie}
+          resizeMode='center'
+          // onAnimationFinish={() => setShowConfetti(false)} // Hide the animation after it finishes
+        />
       </View>
-
-      {/* Confetti Animation */}
-      <LottieView
-        ref={confettiRef}
-        source={require('./assets/confetti.json')}
-        autoPlay={false}
-        loop={false}
-        style={styles.lottie}
-        resizeMode='center'
-        onAnimationFinish={() => setShowConfetti(false)} // Hide the animation after it finishes
-      />
-    </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -89,10 +99,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF',
-    position: 'relative',  // Added position relative to container
+    position: 'relative',
   },
   contentContainer: {
-    flex: 1,  // Ensures the main content container takes up the full height
+    flex: 1,
   },
   sectionTitle: {
     fontSize: 40,
@@ -160,4 +170,3 @@ const styles = StyleSheet.create({
     pointerEvents: 'none',
   },
 });
-
