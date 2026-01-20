@@ -8,6 +8,9 @@ struct HomeView: View {
     @State private var showingJoinSheet = false
     @State private var showingProgressSheet = false
     @State private var selectedList: TodoList?
+    @State private var showingCloudKitSetup = false
+    @State private var cloudKitSetupMessage: String?
+    @State private var isInitializingSchema = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -56,8 +59,21 @@ struct HomeView: View {
                         } label: {
                             Label("Family Progress", systemImage: "chart.bar.fill")
                         }
+
+                        Divider()
+
+                        Button {
+                            initializeCloudKitSchema()
+                        } label: {
+                            Label("Setup CloudKit Schema", systemImage: "icloud.and.arrow.up")
+                        }
+                        .disabled(isInitializingSchema)
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        if isInitializingSchema {
+                            ProgressView()
+                        } else {
+                            Image(systemName: "ellipsis.circle")
+                        }
                     }
                 }
 
@@ -77,6 +93,46 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showingProgressSheet) {
                 FamilyProgressSheet()
+            }
+            .alert("CloudKit Setup", isPresented: $showingCloudKitSetup) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(cloudKitSetupMessage ?? "")
+            }
+        }
+    }
+
+    private func initializeCloudKitSchema() {
+        isInitializingSchema = true
+
+        Task {
+            do {
+                // Check iCloud account status first
+                let status = try await CloudKitService.shared.checkAccountStatus()
+
+                guard status == .available else {
+                    await MainActor.run {
+                        isInitializingSchema = false
+                        cloudKitSetupMessage = "iCloud account not available. Please sign in to iCloud in Settings."
+                        showingCloudKitSetup = true
+                    }
+                    return
+                }
+
+                // Initialize the schema
+                try await CloudKitService.shared.initializeSchema()
+
+                await MainActor.run {
+                    isInitializingSchema = false
+                    cloudKitSetupMessage = "CloudKit schema created successfully! You can now see the record types in CloudKit Dashboard."
+                    showingCloudKitSetup = true
+                }
+            } catch {
+                await MainActor.run {
+                    isInitializingSchema = false
+                    cloudKitSetupMessage = "Failed to initialize schema: \(error.localizedDescription)"
+                    showingCloudKitSetup = true
+                }
             }
         }
     }
