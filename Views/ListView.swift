@@ -26,7 +26,7 @@ struct ListView: View {
                                     task: task,
                                     accentColor: Color(hex: list.color),
                                     onToggle: {
-                                        listsViewModel.toggleTask(
+                                        listsViewModel.toggleTaskWithSync(
                                             in: listID,
                                             taskID: task.id,
                                             userID: userViewModel.userID,
@@ -70,6 +70,21 @@ struct ListView: View {
                 .navigationTitle(list.name)
                 .navigationBarTitleDisplayMode(.large)
                 .toolbar {
+                    if list.isShared {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                refreshList()
+                            } label: {
+                                if listsViewModel.isSyncing {
+                                    ProgressView()
+                                } else {
+                                    Image(systemName: "arrow.clockwise")
+                                }
+                            }
+                            .disabled(listsViewModel.isSyncing)
+                        }
+                    }
+
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
                             Button {
@@ -79,6 +94,12 @@ struct ListView: View {
                             }
 
                             if list.isShared {
+                                Button {
+                                    refreshList()
+                                } label: {
+                                    Label("Refresh from Cloud", systemImage: "arrow.clockwise")
+                                }
+
                                 Button {
                                     // Show participants
                                 } label: {
@@ -109,8 +130,14 @@ struct ListView: View {
     private func addTask() {
         let trimmed = newTaskText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        listsViewModel.addTask(to: listID, text: trimmed)
+        listsViewModel.addTaskWithSync(to: listID, text: trimmed)
         newTaskText = ""
+    }
+
+    private func refreshList() {
+        Task {
+            await listsViewModel.syncSharedLists()
+        }
     }
 }
 

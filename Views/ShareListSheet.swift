@@ -9,6 +9,8 @@ struct ShareListSheet: View {
 
     @State private var inviteCode: String?
     @State private var copied = false
+    @State private var isSharing = false
+    @State private var errorMessage: String?
 
     private var list: TodoList? {
         listsViewModel.getList(by: listID)
@@ -65,16 +67,33 @@ struct ShareListSheet: View {
                         }
                     }
                 } else {
-                    Button {
-                        shareList()
-                    } label: {
-                        Label("Generate Invite Code", systemImage: "link")
-                            .fontWeight(.semibold)
+                    VStack(spacing: 12) {
+                        Button {
+                            shareList()
+                        } label: {
+                            Group {
+                                if isSharing {
+                                    ProgressView()
+                                        .tint(.white)
+                                } else {
+                                    Label("Generate Invite Code", systemImage: "link")
+                                        .fontWeight(.semibold)
+                                }
+                            }
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.kaiPurple)
+                            .background(isSharing ? Color.gray : Color.kaiPurple)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .disabled(isSharing)
+
+                        if let error = errorMessage {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                        }
                     }
                     .padding(.horizontal, 32)
                 }
@@ -133,12 +152,59 @@ struct ShareListSheet: View {
     }
 
     private func shareList() {
+        isSharing = true
+        errorMessage = nil
+
+        // Generate invite code locally first
         guard let code = listsViewModel.shareList(
             listID,
             ownerID: userViewModel.userID,
             ownerName: userViewModel.nickname
-        ) else { return }
-        inviteCode = code
+        ) else {
+            isSharing = false
+            errorMessage = "Failed to generate invite code"
+            return
+        }
+
+        // Save to CloudKit
+        Task {
+            do {
+                if let list = listsViewModel.getList(by: listID) {
+                    let record = try await CloudKitService.shared.saveSharedList(
+                        list,
+                        ownerID: userViewModel.userID,
+                        ownerName: userViewModel.nickname
+                    )
+
+                    // Also save all existing tasks to CloudKit
+                    for task in list.tasks {
+                        _ = try await CloudKitService.shared.saveTask(task, listRecordID: record.recordID)
+                    }
+
+                    // Create invitation record for lookup
+                    _ = try await CloudKitService.shared.createInvitation(
+                        code: code,
+                        listRecordID: record.recordID
+                    )
+
+                    // Update local list with cloud record ID
+                    await MainActor.run {
+                        var updatedList = list
+                        updatedList.cloudRecordID = record.recordID.recordName
+                        listsViewModel.updateList(updatedList)
+                        inviteCode = code
+                        isSharing = false
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSharing = false
+                    errorMessage = "Saved locally. CloudKit sync failed: \(error.localizedDescription)"
+                    // Still show the code even if CloudKit fails
+                    inviteCode = code
+                }
+            }
+        }
     }
 }
 

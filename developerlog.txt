@@ -90,3 +90,63 @@ SETUP INSTRUCTIONS:
 6. Build and run
 
 --------------------------------------------------------------------------------
+
+--------------------------------------------------------------------------------
+Date: 2026-01-19
+Author: Development Team
+Change: CloudKit Integration for List Sharing
+--------------------------------------------------------------------------------
+
+OVERVIEW:
+Connected the sharing UI to CloudKitService for full end-to-end list sharing
+functionality between devices.
+
+FILES MODIFIED:
+
+1. Views/JoinListSheet.swift
+   - Updated joinList() to call CloudKitService.shared.fetchSharedList()
+   - Fetches shared list and tasks from CloudKit by invite code
+   - Adds user as participant on the remote list
+   - Creates local copy with shareType: .participant
+   - Proper error handling with user-friendly messages
+
+2. Views/ShareListSheet.swift
+   - Added isSharing and errorMessage state
+   - Updated shareList() to save list to CloudKit
+   - Saves all existing tasks to CloudKit
+   - Creates Invitation record for code lookup
+   - Updates local list with cloudRecordID
+   - Shows loading spinner during CloudKit save
+   - Graceful degradation if CloudKit fails (still shows code)
+
+3. ViewModels/ListsViewModel.swift
+   - Added isSyncing and syncError state
+   - Added syncSharedLists() - syncs all shared lists from CloudKit
+   - Added syncList() - fetches latest tasks for a specific list
+   - Added syncTaskToCloud() - pushes task changes to CloudKit
+   - Added addTaskWithSync() - adds task locally + syncs to cloud
+   - Added toggleTaskWithSync() - toggles task locally + syncs to cloud
+
+4. Views/ListView.swift
+   - Updated to use toggleTaskWithSync() instead of toggleTask()
+   - Updated to use addTaskWithSync() instead of addTask()
+   - Added refresh button in toolbar for shared lists
+   - Added "Refresh from Cloud" option in menu
+   - Shows loading spinner during sync
+
+TESTING CHECKLIST:
+[ ] Generate invite code - should save to CloudKit
+[ ] Copy/share invite code works
+[ ] Join list with valid code - should fetch from CloudKit
+[ ] Join list with invalid code - should show error
+[ ] Add task to shared list - should sync to cloud
+[ ] Complete task in shared list - should sync to cloud
+[ ] Refresh button fetches latest from cloud
+[ ] Two devices can see each other's changes after refresh
+
+NEXT STEPS FOR FULL TESTING:
+1. Create CloudKit container in Apple Developer Portal
+2. Deploy schema to CloudKit Dashboard
+3. Test on two physical devices with different iCloud accounts
+
+--------------------------------------------------------------------------------
