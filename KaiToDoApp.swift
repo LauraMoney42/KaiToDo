@@ -14,20 +14,32 @@ struct KaiToDoApp: App {
     // Deep link state: set when app is opened via kaitodo://join/CODE
     @State private var pendingInvite: InviteCodeItem? = nil
 
+    // Splash screen — shown on cold start, auto-dismisses after ~2s
+    @State private var showingSplash = true
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(listsViewModel)
-                .environment(userViewModel)
-                .onOpenURL { url in
-                    handleDeepLink(url)
+            ZStack {
+                ContentView()
+                    .environment(listsViewModel)
+                    .environment(userViewModel)
+                    .onOpenURL { url in
+                        handleDeepLink(url)
+                    }
+                    .sheet(item: $pendingInvite) { invite in
+                        // Auto-present join sheet with prefilled code
+                        JoinListSheet(prefillCode: invite.code)
+                            .environment(listsViewModel)
+                            .environment(userViewModel)
+                    }
+
+                if showingSplash {
+                    KindCodeSplashView(isShowing: $showingSplash)
+                        .transition(.opacity)
+                        .zIndex(1)
                 }
-                .sheet(item: $pendingInvite) { invite in
-                    // Auto-present join sheet with prefilled code
-                    JoinListSheet(prefillCode: invite.code)
-                        .environment(listsViewModel)
-                        .environment(userViewModel)
-                }
+            }
+            .animation(.easeOut(duration: 0.3), value: showingSplash)
         }
     }
 
