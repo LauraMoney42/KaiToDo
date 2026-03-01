@@ -8,6 +8,10 @@ struct ConfettiParticle: Identifiable {
     var scale: Double
     var velocity: CGPoint
     var rotationSpeed: Double
+    var waveAmplitude: CGFloat  // horizontal wave width
+    var waveFrequency: Double   // how fast the wave oscillates
+    var wavePhase: Double       // per-particle phase offset for staggered waves
+    var age: Double             // time elapsed, drives wave calculation
 }
 
 struct ConfettiView: View {
@@ -50,20 +54,27 @@ struct ConfettiView: View {
     }
 
     private func createParticles(in size: CGSize) {
+        // Burst from a tight cluster near top-center of screen
+        let centerX = size.width / 2
         particles = (0..<200).map { _ in
-            ConfettiParticle(
-                position: CGPoint(
-                    x: CGFloat.random(in: 0...size.width),
-                    y: -20
-                ),
+            let spawnX = centerX + CGFloat.random(in: -40...40)
+            let spawnY = CGFloat.random(in: -20...50) // near top
+
+            // Explosive outward spread biased downward
+            let horizontalSpeed = CGFloat.random(in: -9...9)
+            let verticalSpeed = CGFloat.random(in: 2...11)
+
+            return ConfettiParticle(
+                position: CGPoint(x: spawnX, y: spawnY),
                 color: colors.randomElement()!,
                 rotation: Double.random(in: 0...360),
                 scale: Double.random(in: 0.5...1.5),
-                velocity: CGPoint(
-                    x: CGFloat.random(in: -2...2),
-                    y: CGFloat.random(in: 3...8)
-                ),
-                rotationSpeed: Double.random(in: -10...10)
+                velocity: CGPoint(x: horizontalSpeed, y: verticalSpeed),
+                rotationSpeed: Double.random(in: -15...15),
+                waveAmplitude: CGFloat.random(in: 0.8...2.5), // side-to-side wave width
+                waveFrequency: Double.random(in: 1.5...3.5),  // oscillation speed
+                wavePhase: Double.random(in: 0...(2 * .pi)),  // stagger so not all in sync
+                age: 0
             )
         }
     }
@@ -76,9 +87,16 @@ struct ConfettiView: View {
 
     private func updateParticles() {
         for i in particles.indices {
-            particles[i].position.x += particles[i].velocity.x
+            particles[i].age += 1.0 / 60.0
+
+            // Sinusoidal wave drift — particles sway left/right as they fall
+            let waveX = particles[i].waveAmplitude *
+                CGFloat(cos(particles[i].waveFrequency * particles[i].age + particles[i].wavePhase))
+
+            particles[i].position.x += particles[i].velocity.x + waveX
             particles[i].position.y += particles[i].velocity.y
-            particles[i].velocity.y += 0.1 // gravity
+            particles[i].velocity.y += 0.12               // gravity
+            particles[i].velocity.x *= 0.98               // initial burst momentum decays
             particles[i].rotation += particles[i].rotationSpeed
         }
     }

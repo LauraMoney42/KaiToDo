@@ -58,7 +58,7 @@ struct ListView: View {
 
                         Button(action: addTask) {
                             Image(systemName: "plus.circle.fill")
-                                .font(.title2)
+                                .font(.system(size: 40))
                                 .foregroundStyle(Color(hex: list.color))
                         }
                         .disabled(newTaskText.isEmpty)
@@ -72,6 +72,10 @@ struct ListView: View {
                         alignment: .top
                     )
                 }
+                // Color-tint the nav bar and all toolbar items with the list's accent color
+                .tint(Color(hex: list.color))
+                .toolbarBackground(Color(hex: list.color).opacity(0.10), for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
                 .navigationBarTitleDisplayMode(.large)
                 .navigationTitle(isEditingTitle ? "" : list.name)
                 .toolbar {

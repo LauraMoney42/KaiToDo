@@ -18,12 +18,17 @@ struct TaskRow: View {
                         Circle()
                             .fill(accentColor)
                             .frame(width: 24, height: 24)
+                            .transition(.scale.combined(with: .opacity))
 
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
+                            .transition(.scale(scale: 0.3).combined(with: .opacity))
                     }
                 }
+                // Spring scale + fade on the whole checkmark widget when state changes
+                .scaleEffect(task.isCompleted ? 1.15 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: task.isCompleted)
             }
             .buttonStyle(.plain)
 
