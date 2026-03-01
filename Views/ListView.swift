@@ -26,29 +26,28 @@ struct ListView: View {
         ZStack {
             if let list = list {
                 VStack(spacing: 0) {
-                    // Task list
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(list.tasks) { task in
-                                TaskRow(
-                                    task: task,
-                                    accentColor: Color(hex: list.color),
-                                    onToggle: {
-                                        listsViewModel.toggleTask(
-                                            in: listID,
-                                            taskID: task.id,
-                                            userID: userViewModel.userID,
-                                            userName: userViewModel.nickname
-                                        )
-                                    },
-                                    onDelete: {
-                                        listsViewModel.deleteTask(in: listID, taskID: task.id)
-                                    }
-                                )
-                                Divider()
-                            }
+                    // Task list — List is required for swipeActions to work correctly
+                    List {
+                        ForEach(list.tasks) { task in
+                            TaskRow(
+                                task: task,
+                                accentColor: Color(hex: list.color),
+                                onToggle: {
+                                    listsViewModel.toggleTask(
+                                        in: listID,
+                                        taskID: task.id,
+                                        userID: userViewModel.userID,
+                                        userName: userViewModel.nickname
+                                    )
+                                },
+                                onDelete: {
+                                    listsViewModel.deleteTask(in: listID, taskID: task.id)
+                                }
+                            )
+                            .listRowInsets(EdgeInsets())
                         }
                     }
+                    .listStyle(.plain)
 
                     // Add task input
                     HStack(spacing: 12) {

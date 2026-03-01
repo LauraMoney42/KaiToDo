@@ -123,7 +123,7 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		A605ACF22F53D5B000621699 /* Products */ = {
+		A605ACF42F53D5EC00621699 /* Products */ = {
 			isa = PBXGroup;
 			name = Products;
 			sourceTree = "<group>";
@@ -209,7 +209,7 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = A605ACF22F53D5B000621699 /* Products */;
+					ProductGroup = A605ACF42F53D5EC00621699 /* Products */;
 					ProjectRef = FC7CDEBD4FA71A5628F0E253 /* KaiToDo.xcodeproj */;
 				},
 			);
