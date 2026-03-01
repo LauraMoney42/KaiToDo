@@ -37,6 +37,12 @@ class ListsViewModel {
         }
     }
 
+    func updateListName(listID: UUID, name: String) {
+        guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
+        lists[index].name = name
+        saveLists()
+    }
+
     func deleteList(_ list: TodoList) {
         lists.removeAll { $0.id == list.id }
         saveLists()

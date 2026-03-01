@@ -8,10 +8,18 @@ struct ListView: View {
 
     @State private var newTaskText = ""
     @State private var showingShareSheet = false
+    @State private var isEditingTitle = false
+    @State private var editedTitle = ""
     @FocusState private var isInputFocused: Bool
+    @FocusState private var isTitleFocused: Bool
 
     private var list: TodoList? {
         listsViewModel.getList(by: listID)
+    }
+
+    /// User can edit if list is local, or if they are the owner
+    private func canEditTitle(_ list: TodoList) -> Bool {
+        list.shareType == .local || list.ownerID == userViewModel.userID
     }
 
     var body: some View {
@@ -47,9 +55,7 @@ struct ListView: View {
                         TextField("Add a task...", text: $newTaskText)
                             .textFieldStyle(.plain)
                             .focused($isInputFocused)
-                            .onSubmit {
-                                addTask()
-                            }
+                            .onSubmit { addTask() }
 
                         Button(action: addTask) {
                             Image(systemName: "plus.circle.fill")
@@ -67,26 +73,62 @@ struct ListView: View {
                         alignment: .top
                     )
                 }
-                .navigationTitle(list.name)
                 .navigationBarTitleDisplayMode(.large)
+                .navigationTitle(isEditingTitle ? "" : list.name)
                 .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            Button {
-                                showingShareSheet = true
-                            } label: {
-                                Label("Share List", systemImage: "square.and.arrow.up")
-                            }
+                    // Inline title editor (principal placement = center of nav bar)
+                    if isEditingTitle {
+                        ToolbarItem(placement: .principal) {
+                            TextField("List name", text: $editedTitle)
+                                .font(.headline)
+                                .multilineTextAlignment(.center)
+                                .focused($isTitleFocused)
+                                .onSubmit { commitTitleEdit(list: list) }
+                                .submitLabel(.done)
+                        }
 
-                            if list.isShared {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { commitTitleEdit(list: list) }
+                                .fontWeight(.semibold)
+                        }
+                    } else {
+                        // Tappable title hint (only for owner)
+                        if canEditTitle(list) {
+                            ToolbarItem(placement: .principal) {
                                 Button {
-                                    // Show participants
+                                    startEditingTitle(list: list)
                                 } label: {
-                                    Label("Participants (\(list.participants.count + 1))", systemImage: "person.2")
+                                    HStack(spacing: 4) {
+                                        Text(list.name)
+                                            .font(.headline)
+                                            .foregroundStyle(.primary)
+                                        Image(systemName: "pencil")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
+                                .buttonStyle(.plain)
                             }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
+                        }
+
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Menu {
+                                Button {
+                                    showingShareSheet = true
+                                } label: {
+                                    Label("Share List", systemImage: "square.and.arrow.up")
+                                }
+
+                                if list.isShared {
+                                    Button {
+                                        // Show participants
+                                    } label: {
+                                        Label("Participants (\(list.participants.count + 1))", systemImage: "person.2")
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                            }
                         }
                     }
                 }
@@ -104,6 +146,23 @@ struct ListView: View {
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private func startEditingTitle(list: TodoList) {
+        editedTitle = list.name
+        isEditingTitle = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            isTitleFocused = true
+        }
+    }
+
+    private func commitTitleEdit(list: TodoList) {
+        let trimmed = editedTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty && trimmed != list.name {
+            listsViewModel.updateListName(listID: listID, name: trimmed)
+        }
+        isEditingTitle = false
+        isTitleFocused = false
     }
 
     private func addTask() {
