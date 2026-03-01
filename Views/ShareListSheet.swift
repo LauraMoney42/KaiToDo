@@ -120,12 +120,13 @@ struct ShareListSheet: View {
                     .padding(.horizontal, 32)
                 }
 
-                // Share button
-                if inviteCode != nil || list?.inviteCode != nil {
+                // Share button — sends deep link so recipient taps & auto-joins
+                if let code = inviteCode ?? list?.inviteCode,
+                   let deepLink = URL(string: "kaitodo://join/\(code)") {
                     ShareLink(
-                        item: "Join my KaiToDo list! Use code: \(inviteCode ?? list?.inviteCode ?? "")",
+                        item: deepLink,
                         subject: Text("Join my KaiToDo list"),
-                        message: Text("Use this code to join my list in KaiToDo")
+                        message: Text("Tap to join \"\(list?.name ?? "my list")\" in KaiToDo!")
                     ) {
                         Label("Share via Messages", systemImage: "message.fill")
                             .fontWeight(.semibold)

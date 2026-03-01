@@ -1,16 +1,46 @@
 import SwiftUI
 
+/// Wrapper so a String invite code can drive sheet(item:)
+struct InviteCodeItem: Identifiable {
+    let id = UUID()
+    let code: String
+}
+
 @main
 struct KaiToDoApp: App {
     @State private var listsViewModel = ListsViewModel()
     @State private var userViewModel = UserViewModel()
+
+    // Deep link state: set when app is opened via kaitodo://join/CODE
+    @State private var pendingInvite: InviteCodeItem? = nil
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(listsViewModel)
                 .environment(userViewModel)
+                .onOpenURL { url in
+                    handleDeepLink(url)
+                }
+                .sheet(item: $pendingInvite) { invite in
+                    // Auto-present join sheet with prefilled code
+                    JoinListSheet(prefillCode: invite.code)
+                        .environment(listsViewModel)
+                        .environment(userViewModel)
+                }
         }
+    }
+
+    /// Parses kaitodo://join/ABC123 and triggers the join sheet
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "kaitodo",
+              url.host == "join" else { return }
+        let code = url.pathComponents
+            .filter { $0 != "/" }
+            .first?
+            .uppercased()
+        guard let code, code.count == 6 else { return }
+        pendingInvite = InviteCodeItem(code: code)
     }
 }
 

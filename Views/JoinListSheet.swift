@@ -5,6 +5,9 @@ struct JoinListSheet: View {
     @Environment(UserViewModel.self) private var userViewModel
     @Environment(\.dismiss) private var dismiss
 
+    /// Optional prefill from deep link (kaitodo://join/CODE) — auto-triggers join on appear
+    var prefillCode: String? = nil
+
     @State private var inviteCode = ""
     @State private var isJoining = false
     @State private var errorMessage: String?
@@ -94,7 +97,13 @@ struct JoinListSheet: View {
                 }
             }
             .onAppear {
-                isTextFieldFocused = true
+                if let code = prefillCode {
+                    // Deep link: prefill code and auto-join immediately
+                    inviteCode = code
+                    joinList()
+                } else {
+                    isTextFieldFocused = true
+                }
             }
         }
         .presentationDetents([.medium])
