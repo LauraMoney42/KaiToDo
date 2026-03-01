@@ -252,6 +252,11 @@ class ListsViewModel {
         lists[listIndex].tasks[taskIndex] = task
         saveLists()
 
+        // Fire multi-firework if the entire list is now complete
+        if lists[listIndex].tasks.allSatisfy({ $0.isCompleted }) && !lists[listIndex].tasks.isEmpty {
+            listCompletedTrigger += 1
+        }
+
         // Sync to CloudKit if shared
         if lists[listIndex].isShared {
             syncTaskToCloud(listID: listID, task: task)

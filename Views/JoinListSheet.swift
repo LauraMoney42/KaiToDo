@@ -121,15 +121,20 @@ struct JoinListSheet: View {
                         inviteCode: inviteCode
                     )
 
-                    // Add self as participant on CloudKit
-                    try await CloudKitService.shared.addParticipant(
-                        userID: userViewModel.userID,
-                        userName: userViewModel.nickname,
-                        toListRecord: record
-                    )
+                    // Try to register as participant — non-fatal if permission denied
+                    // (CloudKit public DB only allows the record creator to modify it)
+                    do {
+                        try await CloudKitService.shared.addParticipant(
+                            userID: userViewModel.userID,
+                            userName: userViewModel.nickname,
+                            toListRecord: record
+                        )
+                    } catch {
+                        print("⚠️ Could not register participant (non-fatal): \(error)")
+                    }
 
+                    // Always add locally — this is the core join action
                     await MainActor.run {
-                        // Check if we already have this list
                         if !listsViewModel.lists.contains(where: { $0.cloudRecordID == record.recordID.recordName }) {
                             listsViewModel.lists.append(sharedList)
                             listsViewModel.saveLists()
