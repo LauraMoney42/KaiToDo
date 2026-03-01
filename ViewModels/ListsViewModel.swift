@@ -4,7 +4,8 @@ import SwiftUI
 @Observable
 class ListsViewModel {
     var lists: [TodoList] = []
-    var showingConfetti = false
+    var confettiTrigger = 0          // increment to fire single-task confetti
+    var listCompletedTrigger = 0     // increment to fire multi-firework when all tasks done
     var lastCompletedTaskID: UUID?
 
     private let storage = StorageService.shared
@@ -76,6 +77,10 @@ class ListsViewModel {
         }
         lists[listIndex].tasks[taskIndex] = task
         saveLists()
+        // Fire multi-firework if the entire list is now complete
+        if lists[listIndex].tasks.allSatisfy({ $0.isCompleted }) && !lists[listIndex].tasks.isEmpty {
+            listCompletedTrigger += 1
+        }
     }
 
     func updateTask(in listID: UUID, task: TodoTask) {
@@ -106,10 +111,7 @@ class ListsViewModel {
 
     private func triggerConfetti(for taskID: UUID) {
         lastCompletedTaskID = taskID
-        showingConfetti = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-            self?.showingConfetti = false
-        }
+        confettiTrigger += 1
     }
 
     // MARK: - Sharing

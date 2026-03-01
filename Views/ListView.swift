@@ -10,8 +10,22 @@ struct ListView: View {
     @State private var showingShareSheet = false
     @State private var isEditingTitle = false
     @State private var editedTitle = ""
+    @State private var keyboardVisible = false  // driven by UIKit notifications — instant
     @FocusState private var isInputFocused: Bool
     @FocusState private var isTitleFocused: Bool
+
+    // Confetti params — live-updated by ConfettiSettingsView via @AppStorage
+    @AppStorage("confetti_num") private var confettiNum: Int = 80
+    @AppStorage("confetti_size") private var confettiSize: Double = 11.0
+    @AppStorage("confetti_rainHeight") private var confettiRainHeight: Double = 700.0
+    @AppStorage("confetti_opacity") private var confettiOpacity: Double = 1.0
+    @AppStorage("confetti_fadesOut") private var confettiFadesOut: Bool = true
+    @AppStorage("confetti_openingAngle") private var confettiOpeningAngle: Double = 60.0
+    @AppStorage("confetti_closingAngle") private var confettiClosingAngle: Double = 120.0
+    @AppStorage("confetti_radius") private var confettiRadius: Double = 520.0
+    @AppStorage("confetti_repetitions") private var confettiRepetitions: Int = 1
+    @AppStorage("confetti_repetitionInterval") private var confettiRepetitionInterval: Double = 1.0
+    @AppStorage("confetti_spinSpeed") private var confettiSpinSpeed: Double = 1.0
 
     private var list: TodoList? {
         listsViewModel.getList(by: listID)
@@ -28,6 +42,7 @@ struct ListView: View {
                 VStack(spacing: 0) {
                     // Task list — List is required for swipeActions to work correctly.
                     // When empty, swap in a friendly empty state instead of a blank list.
+                    // Tapping anywhere outside the keyboard dismisses it.
                     Group {
                         if list.tasks.isEmpty {
                             emptyTasksView(accentColor: Color(hex: list.color))
@@ -50,9 +65,11 @@ struct ListView: View {
                                         }
                                     )
                                     .listRowInsets(EdgeInsets())
+                                    .listRowSeparator(.hidden)
                                 }
                             }
                             .listStyle(.plain)
+                            .scrollDismissesKeyboard(.immediately)
                         }
                     }
 
@@ -79,10 +96,8 @@ struct ListView: View {
                         alignment: .top
                     )
                 }
-                // Color-tint the nav bar and all toolbar items with the list's accent color
+                // Tint interactive elements (buttons, checkmarks) with list accent color
                 .tint(Color(hex: list.color))
-                .toolbarBackground(Color(hex: list.color).opacity(0.10), for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
                 .navigationBarTitleDisplayMode(.large)
                 .navigationTitle(list.name)
                 .onTapGesture {
@@ -105,6 +120,20 @@ struct ListView: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") { commitTitleEdit(list: list) }
                                 .fontWeight(.semibold)
+                        }
+                    } else if keyboardVisible {
+                        // Notes-style: checkmark appears the moment keyboard shows, tap to dismiss
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                isInputFocused = false
+                                UIApplication.shared.sendAction(
+                                    #selector(UIResponder.resignFirstResponder),
+                                    to: nil, from: nil, for: nil
+                                )
+                            } label: {
+                                Image(systemName: "checkmark")
+                                    .fontWeight(.semibold)
+                            }
                         }
                     } else {
                         ToolbarItem(placement: .topBarTrailing) {
@@ -142,6 +171,40 @@ struct ListView: View {
             } else {
                 Text("List not found")
                     .foregroundStyle(.secondary)
+            }
+        }
+        .onTapGesture {
+            isInputFocused = false
+        }
+        // Track keyboard visibility via UIKit notifications — more reliable than @FocusState for toolbar
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            guard !isEditingTitle else { return }
+            keyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardVisible = false
+        }
+        .confettiCannon(
+            trigger: Binding(
+                get: { listsViewModel.confettiTrigger },
+                set: { _ in }
+            ),
+            num: confettiNum,
+            colors: [.kaiPurple, .kaiRed, .kaiTeal, .kaiYellow, .kaiOrange, .kaiMint, .kaiPink, .kaiBlue],
+            confettiSize: CGFloat(confettiSize),
+            rainHeight: CGFloat(confettiRainHeight),
+            fadesOut: confettiFadesOut,
+            opacity: confettiOpacity,
+            openingAngle: .degrees(confettiOpeningAngle),
+            closingAngle: .degrees(confettiClosingAngle),
+            radius: CGFloat(confettiRadius),
+            repetitions: confettiRepetitions,
+            repetitionInterval: confettiRepetitionInterval,
+            spinSpeedMultiplier: confettiSpinSpeed
+        )
+        .overlay {
+            if listsViewModel.listCompletedTrigger > 0 {
+                MultiFireworkOverlay(trigger: listsViewModel.listCompletedTrigger)
             }
         }
     }
@@ -194,6 +257,42 @@ struct ListView: View {
         guard !trimmed.isEmpty else { return }
         listsViewModel.addTask(to: listID, text: trimmed)
         newTaskText = ""
+    }
+}
+
+// MARK: - Multi-Firework Overlay
+
+/// Fires 5 staggered 360° confetti cannons (4 corners + center) when an entire list is completed.
+struct MultiFireworkOverlay: View {
+    let trigger: Int
+    @State private var t1 = 1; @State private var t2 = 1
+    @State private var t3 = 1; @State private var t4 = 1; @State private var t5 = 1
+
+    var body: some View {
+        ZStack {
+            // Center burst
+            ConfettiCannon(trigger: $t5, num: 80, openingAngle: .degrees(0), closingAngle: .degrees(360), radius: 300)
+            VStack {
+                HStack {
+                    ConfettiCannon(trigger: $t1, num: 20, openingAngle: .degrees(0), closingAngle: .degrees(360), radius: 200)
+                    Spacer()
+                    ConfettiCannon(trigger: $t2, num: 20, openingAngle: .degrees(0), closingAngle: .degrees(360), radius: 200)
+                }
+                Spacer()
+                HStack {
+                    ConfettiCannon(trigger: $t3, num: 20, openingAngle: .degrees(0), closingAngle: .degrees(360), radius: 200)
+                    Spacer()
+                    ConfettiCannon(trigger: $t4, num: 20, openingAngle: .degrees(0), closingAngle: .degrees(360), radius: 200)
+                }
+            }
+        }
+        .onAppear {
+            t1 += 1
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { t4 += 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { t2 += 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { t3 += 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { t5 += 1 }
+        }
     }
 }
 

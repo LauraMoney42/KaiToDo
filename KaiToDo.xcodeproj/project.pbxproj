@@ -20,6 +20,7 @@
 		6FF7160634770AD2CF02E37A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F8E2DD1246059520DBECB43F /* Assets.xcassets */; };
 		742D3F5A25A6D0C521E6C59D /* ListsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6ADC69647A803E080834F2F /* ListsViewModel.swift */; };
 		7E0A3BAEB8881549E636071C /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */; };
+		AA1B2C3D4E5F6A7B8C9D0E1F /* ConfettiSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */; };
 		939E334696FC62BC5B61FD8C /* KaiToDo.xcodeproj in Resources */ = {isa = PBXBuildFile; fileRef = FC7CDEBD4FA71A5628F0E253 /* KaiToDo.xcodeproj */; };
 		94E67110E82B85D9C6759BFD /* ARCHITECTURE.md in Resources */ = {isa = PBXBuildFile; fileRef = A8B3354335834B881D0FE2C4 /* ARCHITECTURE.md */; };
 		98A3D24A45939BBEBD96D1E1 /* ListCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FAB93258451155334D8663D /* ListCard.swift */; };
@@ -39,7 +40,7 @@
 /* Begin PBXFileReference section */
 		0C8F6DB5A3C732F29B5A5FB3 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
 		21AB1341E467E051A22BF6C6 /* ShareListSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareListSheet.swift; sourceTree = "<group>"; };
-		2D27FBD5243AD2BE70E01D60 /* KaiToDo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KaiToDo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2D27FBD5243AD2BE70E01D60 /* KaiToDo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KaiToDo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		2DC4234EF1D5CE0799EC0012 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
 		2EA5954BED02DE53FADC6C4B /* TodoList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoList.swift; sourceTree = "<group>"; };
 		346AA4CCAF112BCCE98861E7 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -54,6 +55,7 @@
 		852147AD5553FB2F07BAAF3F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		91675FDEF26F75EF489AE287 /* CloudKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitService.swift; sourceTree = "<group>"; };
 		9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiSettingsView.swift; sourceTree = "<group>"; };
 		9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyProgressSheet.swift; sourceTree = "<group>"; };
 		A6ADC69647A803E080834F2F /* ListsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsViewModel.swift; sourceTree = "<group>"; };
 		A8B3354335834B881D0FE2C4 /* ARCHITECTURE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ARCHITECTURE.md; sourceTree = "<group>"; };
@@ -148,6 +150,7 @@
 			isa = PBXGroup;
 			children = (
 				9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */,
+				BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */,
 				9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */,
 				346AA4CCAF112BCCE98861E7 /* HomeView.swift */,
 				366B83E09DBB0F370FACA67D /* JoinListSheet.swift */,
@@ -207,11 +210,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1500;
-				TargetAttributes = {
-					DAE73849866A9AF44BC23659 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 4826FC36616B953CB6A1CAF9 /* Build configuration list for PBXProject "KaiToDo" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -260,6 +258,7 @@
 			files = (
 				F28EA25D0D99B8537EFF4EE4 /* CloudKitService.swift in Sources */,
 				7E0A3BAEB8881549E636071C /* ConfettiView.swift in Sources */,
+				AA1B2C3D4E5F6A7B8C9D0E1F /* ConfettiSettingsView.swift in Sources */,
 				ACBB6F0A0E00EDE87801AC83 /* ContentView.swift in Sources */,
 				0E0B3A26A892FAEC8ED67232 /* FamilyProgressSheet.swift in Sources */,
 				5FEEA52D46691D090CD9E381 /* HomeView.swift in Sources */,
@@ -350,7 +349,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = KaiToDo.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = G6U69FC9H3;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -370,7 +369,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = KaiToDo.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = G6U69FC9H3;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
