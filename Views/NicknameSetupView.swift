@@ -14,16 +14,16 @@ struct NicknameSetupView: View {
         VStack(spacing: 32) {
             Spacer()
 
-            // Icon
-            Image(systemName: "person.crop.circle.fill")
+            // Hero emoji
+            Text("✅")
                 .font(.system(size: 80))
-                .foregroundStyle(Color.kaiPurple)
 
             // Title
             VStack(spacing: 8) {
-                Text("Welcome to KaiToDo")
+                Text("Welcome to Kai To Do! 🎉")
                     .font(.title)
                     .fontWeight(.bold)
+                    .multilineTextAlignment(.center)
 
                 Text("Enter your nickname to get started")
                     .foregroundStyle(.secondary)
