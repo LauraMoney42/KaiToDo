@@ -1,5 +1,5 @@
 # Xcode
-*.xcodeproj/
+# *.xcodeproj/ — committed directly (no XcodeGen)
 *.xcworkspace/
 xcuserdata/
 *.xcuserstate

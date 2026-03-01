@@ -16,7 +16,7 @@ struct FamilyProgressSheet: View {
                     VStack(spacing: 8) {
                         Text("\(listsViewModel.totalCompletedTasks())")
                             .font(.system(size: 48, weight: .bold))
-                            .foregroundStyle(.kaiPurple)
+                            .foregroundStyle(Color.kaiPurple)
 
                         Text("Tasks Completed")
                             .foregroundStyle(.secondary)

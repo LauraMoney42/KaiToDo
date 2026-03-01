@@ -21,7 +21,7 @@ struct JoinListSheet: View {
                 VStack(spacing: 8) {
                     Image(systemName: "person.badge.plus.fill")
                         .font(.system(size: 48))
-                        .foregroundStyle(.kaiTeal)
+                        .foregroundStyle(Color.kaiTeal)
 
                     Text("Join a List")
                         .font(.title2)

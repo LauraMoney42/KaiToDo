@@ -1,6 +1,6 @@
 import Foundation
 
-struct Participant: Identifiable, Codable, Equatable {
+struct Participant: Identifiable, Codable, Equatable, Hashable {
     let id: String
     var name: String
     let joinedAt: Date
@@ -12,7 +12,7 @@ struct Participant: Identifiable, Codable, Equatable {
     }
 }
 
-struct TodoList: Identifiable, Codable, Equatable {
+struct TodoList: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
     var name: String
     var color: String

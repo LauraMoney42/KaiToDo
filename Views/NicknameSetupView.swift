@@ -17,7 +17,7 @@ struct NicknameSetupView: View {
             // Icon
             Image(systemName: "person.crop.circle.fill")
                 .font(.system(size: 80))
-                .foregroundStyle(.kaiPurple)
+                .foregroundStyle(Color.kaiPurple)
 
             // Title
             VStack(spacing: 8) {

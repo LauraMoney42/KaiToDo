@@ -21,7 +21,7 @@ struct ShareListSheet: View {
                 VStack(spacing: 8) {
                     Image(systemName: "person.2.fill")
                         .font(.system(size: 48))
-                        .foregroundStyle(.kaiPurple)
+                        .foregroundStyle(Color.kaiPurple)
 
                     Text("Share List")
                         .font(.title2)
@@ -47,7 +47,7 @@ struct ShareListSheet: View {
                         Text(code)
                             .font(.system(size: 36, weight: .bold, design: .monospaced))
                             .tracking(4)
-                            .foregroundStyle(.kaiPurple)
+                            .foregroundStyle(Color.kaiPurple)
                             .padding(.horizontal, 24)
                             .padding(.vertical, 16)
                             .background(Color(.systemGray6))

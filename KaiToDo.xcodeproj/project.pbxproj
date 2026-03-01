@@ -1,0 +1,438 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		07D228B9316E07F28657ED4E /* ShareListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21AB1341E467E051A22BF6C6 /* ShareListSheet.swift */; };
+		0E0B3A26A892FAEC8ED67232 /* FamilyProgressSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */; };
+		4618551A65125BE9A213C208 /* KaiToDoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC16A31324E386221A3A06A7 /* KaiToDoApp.swift */; };
+		523C1433B4ED44006E3569D0 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CBBA02F83EF73A87DA237C2 /* NotificationService.swift */; };
+		5399585F5139F8867497CBEB /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E2AC08E0E2DD821EB14252 /* StorageService.swift */; };
+		5FEEA52D46691D090CD9E381 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346AA4CCAF112BCCE98861E7 /* HomeView.swift */; };
+		6B09808C83398C425D0D1216 /* NicknameSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8BD83269D413416EAE9D734 /* NicknameSetupView.swift */; };
+		6FF7160634770AD2CF02E37A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F8E2DD1246059520DBECB43F /* Assets.xcassets */; };
+		742D3F5A25A6D0C521E6C59D /* ListsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6ADC69647A803E080834F2F /* ListsViewModel.swift */; };
+		7E0A3BAEB8881549E636071C /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */; };
+		98A3D24A45939BBEBD96D1E1 /* ListCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FAB93258451155334D8663D /* ListCard.swift */; };
+		A20C5A9C5C178DF543359188 /* developerlog.txt in Resources */ = {isa = PBXBuildFile; fileRef = DD128B96D149FE0B486D6FFF /* developerlog.txt */; };
+		A46F5ECF6CB64FEE80034CA2 /* JoinListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366B83E09DBB0F370FACA67D /* JoinListSheet.swift */; };
+		ACBB6F0A0E00EDE87801AC83 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 852147AD5553FB2F07BAAF3F /* ContentView.swift */; };
+		CE28D09A69D0F750BC2B9353 /* TodoTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61AFAB584A8E9D203E745768 /* TodoTask.swift */; };
+		D8A8421E135C28AE05FB0B44 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B425E1AB4550151156ED1CD1 /* ListView.swift */; };
+		ECED116AD066B5BD17C328DE /* UserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA78720BD91C69C4F54ABD0E /* UserViewModel.swift */; };
+		F28EA25D0D99B8537EFF4EE4 /* CloudKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91675FDEF26F75EF489AE287 /* CloudKitService.swift */; };
+		F981D235F2A4C2583B2CAD5A /* TodoList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EA5954BED02DE53FADC6C4B /* TodoList.swift */; };
+		FA55E5D9F49FEABB07DBB13E /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DC4234EF1D5CE0799EC0012 /* UserProfile.swift */; };
+		FA90DA2EB86F426DD049B6E0 /* TaskRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C8F6DB5A3C732F29B5A5FB3 /* TaskRow.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0C8F6DB5A3C732F29B5A5FB3 /* TaskRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRow.swift; sourceTree = "<group>"; };
+		21AB1341E467E051A22BF6C6 /* ShareListSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareListSheet.swift; sourceTree = "<group>"; };
+		2D27FBD5243AD2BE70E01D60 /* KaiToDo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KaiToDo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2DC4234EF1D5CE0799EC0012 /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		2EA5954BED02DE53FADC6C4B /* TodoList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoList.swift; sourceTree = "<group>"; };
+		346AA4CCAF112BCCE98861E7 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		366B83E09DBB0F370FACA67D /* JoinListSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinListSheet.swift; sourceTree = "<group>"; };
+		4FAB93258451155334D8663D /* ListCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListCard.swift; sourceTree = "<group>"; };
+		61AFAB584A8E9D203E745768 /* TodoTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoTask.swift; sourceTree = "<group>"; };
+		6CBBA02F83EF73A87DA237C2 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		8407CE2AC94B049CC2A7A059 /* .gitignore */ = {isa = PBXFileReference; path = .gitignore; sourceTree = "<group>"; };
+		852147AD5553FB2F07BAAF3F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		91675FDEF26F75EF489AE287 /* CloudKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitService.swift; sourceTree = "<group>"; };
+		9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyProgressSheet.swift; sourceTree = "<group>"; };
+		A6ADC69647A803E080834F2F /* ListsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsViewModel.swift; sourceTree = "<group>"; };
+		B0FA7D6B70C73CE20B8E1FF5 /* KaiToDo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KaiToDo.entitlements; sourceTree = "<group>"; };
+		B425E1AB4550151156ED1CD1 /* ListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListView.swift; sourceTree = "<group>"; };
+		B8BD83269D413416EAE9D734 /* NicknameSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NicknameSetupView.swift; sourceTree = "<group>"; };
+		C2E2AC08E0E2DD821EB14252 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
+		DC16A31324E386221A3A06A7 /* KaiToDoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaiToDoApp.swift; sourceTree = "<group>"; };
+		DD128B96D149FE0B486D6FFF /* developerlog.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = developerlog.txt; sourceTree = "<group>"; };
+		DD756207D5A84BAB3848A4E8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		EA78720BD91C69C4F54ABD0E /* UserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserViewModel.swift; sourceTree = "<group>"; };
+		F8E2DD1246059520DBECB43F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		2044C47B0CED1951D645D088 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				2D27FBD5243AD2BE70E01D60 /* KaiToDo.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		41341ADEDC23FF67ADBAA96C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				91675FDEF26F75EF489AE287 /* CloudKitService.swift */,
+				6CBBA02F83EF73A87DA237C2 /* NotificationService.swift */,
+				C2E2AC08E0E2DD821EB14252 /* StorageService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		5F4615CE290FDAE627114553 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F8E2DD1246059520DBECB43F /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		64AD175C3A50FEB892336D90 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				2EA5954BED02DE53FADC6C4B /* TodoList.swift */,
+				61AFAB584A8E9D203E745768 /* TodoTask.swift */,
+				2DC4234EF1D5CE0799EC0012 /* UserProfile.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		9158CA117D245C4AFA1F8D8F = {
+			isa = PBXGroup;
+			children = (
+				FB1E174BA922441FD9E23BC0 /* KaiToDo */,
+				64AD175C3A50FEB892336D90 /* Models */,
+				5F4615CE290FDAE627114553 /* Resources */,
+				41341ADEDC23FF67ADBAA96C /* Services */,
+				9A7D6A87FBC52A56938C3240 /* ViewModels */,
+				D3C708C59231CD4ACF97AC1A /* Views */,
+				2044C47B0CED1951D645D088 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		9A7D6A87FBC52A56938C3240 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A6ADC69647A803E080834F2F /* ListsViewModel.swift */,
+				EA78720BD91C69C4F54ABD0E /* UserViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		D3C708C59231CD4ACF97AC1A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */,
+				9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */,
+				346AA4CCAF112BCCE98861E7 /* HomeView.swift */,
+				366B83E09DBB0F370FACA67D /* JoinListSheet.swift */,
+				4FAB93258451155334D8663D /* ListCard.swift */,
+				B425E1AB4550151156ED1CD1 /* ListView.swift */,
+				B8BD83269D413416EAE9D734 /* NicknameSetupView.swift */,
+				21AB1341E467E051A22BF6C6 /* ShareListSheet.swift */,
+				0C8F6DB5A3C732F29B5A5FB3 /* TaskRow.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		FB1E174BA922441FD9E23BC0 /* KaiToDo */ = {
+			isa = PBXGroup;
+			children = (
+				8407CE2AC94B049CC2A7A059 /* .gitignore */,
+				852147AD5553FB2F07BAAF3F /* ContentView.swift */,
+				DD128B96D149FE0B486D6FFF /* developerlog.txt */,
+				DD756207D5A84BAB3848A4E8 /* Info.plist */,
+				B0FA7D6B70C73CE20B8E1FF5 /* KaiToDo.entitlements */,
+				DC16A31324E386221A3A06A7 /* KaiToDoApp.swift */,
+				64AD175C3A50FEB892336D90 /* Models */,
+				5F4615CE290FDAE627114553 /* Resources */,
+				41341ADEDC23FF67ADBAA96C /* Services */,
+				9A7D6A87FBC52A56938C3240 /* ViewModels */,
+				D3C708C59231CD4ACF97AC1A /* Views */,
+			);
+			name = KaiToDo;
+			path = .;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		DAE73849866A9AF44BC23659 /* KaiToDo */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8DEE186F9BA07410898D5CD0 /* Build configuration list for PBXNativeTarget "KaiToDo" */;
+			buildPhases = (
+				1328FBA50AAF124DB28CFB0C /* Sources */,
+				77E76019E334B4B76507D3EB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KaiToDo;
+			packageProductDependencies = (
+			);
+			productName = KaiToDo;
+			productReference = 2D27FBD5243AD2BE70E01D60 /* KaiToDo.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		22F50AA36F2FB815D248E789 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					DAE73849866A9AF44BC23659 = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = 4826FC36616B953CB6A1CAF9 /* Build configuration list for PBXProject "KaiToDo" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 9158CA117D245C4AFA1F8D8F;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DAE73849866A9AF44BC23659 /* KaiToDo */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		77E76019E334B4B76507D3EB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6FF7160634770AD2CF02E37A /* Assets.xcassets in Resources */,
+				A20C5A9C5C178DF543359188 /* developerlog.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1328FBA50AAF124DB28CFB0C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F28EA25D0D99B8537EFF4EE4 /* CloudKitService.swift in Sources */,
+				7E0A3BAEB8881549E636071C /* ConfettiView.swift in Sources */,
+				ACBB6F0A0E00EDE87801AC83 /* ContentView.swift in Sources */,
+				0E0B3A26A892FAEC8ED67232 /* FamilyProgressSheet.swift in Sources */,
+				5FEEA52D46691D090CD9E381 /* HomeView.swift in Sources */,
+				A46F5ECF6CB64FEE80034CA2 /* JoinListSheet.swift in Sources */,
+				4618551A65125BE9A213C208 /* KaiToDoApp.swift in Sources */,
+				98A3D24A45939BBEBD96D1E1 /* ListCard.swift in Sources */,
+				D8A8421E135C28AE05FB0B44 /* ListView.swift in Sources */,
+				742D3F5A25A6D0C521E6C59D /* ListsViewModel.swift in Sources */,
+				6B09808C83398C425D0D1216 /* NicknameSetupView.swift in Sources */,
+				523C1433B4ED44006E3569D0 /* NotificationService.swift in Sources */,
+				07D228B9316E07F28657ED4E /* ShareListSheet.swift in Sources */,
+				5399585F5139F8867497CBEB /* StorageService.swift in Sources */,
+				FA90DA2EB86F426DD049B6E0 /* TaskRow.swift in Sources */,
+				F981D235F2A4C2583B2CAD5A /* TodoList.swift in Sources */,
+				CE28D09A69D0F750BC2B9353 /* TodoTask.swift in Sources */,
+				FA55E5D9F49FEABB07DBB13E /* UserProfile.swift in Sources */,
+				ECED116AD066B5BD17C328DE /* UserViewModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		41C91E1B62D3E5E27B2194C2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+		56DF23CB2EC2CF68C2360BDF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KaiToDo.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaitodo.app;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C6B439BE3F17A9C3BBAE0B75 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = KaiToDo.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kaitodo.app;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		C747C33237E0ED6DDD6B2302 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4826FC36616B953CB6A1CAF9 /* Build configuration list for PBXProject "KaiToDo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C747C33237E0ED6DDD6B2302 /* Debug */,
+				41C91E1B62D3E5E27B2194C2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8DEE186F9BA07410898D5CD0 /* Build configuration list for PBXNativeTarget "KaiToDo" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				56DF23CB2EC2CF68C2360BDF /* Debug */,
+				C6B439BE3F17A9C3BBAE0B75 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 22F50AA36F2FB815D248E789 /* Project object */;
+}
