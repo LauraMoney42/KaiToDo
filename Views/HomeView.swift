@@ -7,7 +7,7 @@ struct HomeView: View {
     @State private var showingNewListSheet = false
     @State private var showingJoinSheet = false
     @State private var showingProgressSheet = false
-    @State private var selectedList: TodoList?
+    @State private var showingSettings = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 16),
@@ -16,56 +16,56 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                if listsViewModel.lists.isEmpty {
-                    emptyState
-                } else {
-                    LazyVGrid(columns: columns, spacing: 16) {
-                        ForEach(listsViewModel.lists) { list in
-                            NavigationLink(value: list) {
-                                ListCard(list: list)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    listsViewModel.deleteList(list)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+            ZStack(alignment: .bottom) {
+                ScrollView {
+                    if listsViewModel.lists.isEmpty {
+                        emptyState
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 16) {
+                            ForEach(listsViewModel.lists) { list in
+                                NavigationLink(value: list) {
+                                    ListCard(list: list)
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        listsViewModel.deleteList(list)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
                             }
                         }
+                        .padding()
+                        .padding(.bottom, 100) // room for floating button
                     }
-                    .padding()
                 }
+
+                // Floating + button at bottom center
+                Button {
+                    showingNewListSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 64, height: 64)
+                        .background(Color.kaiPurple)
+                        .clipShape(Circle())
+                        .shadow(color: Color.kaiPurple.opacity(0.45), radius: 14, y: 5)
+                }
+                .padding(.bottom, 32)
             }
-            .navigationTitle("KaiToDo")
+            .navigationTitle("Kai To Do ✅")
             .navigationDestination(for: TodoList.self) { list in
                 ListView(listID: list.id)
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Button {
-                            showingJoinSheet = true
-                        } label: {
-                            Label("Join List", systemImage: "person.badge.plus")
-                        }
-
-                        Button {
-                            showingProgressSheet = true
-                        } label: {
-                            Label("Family Progress", systemImage: "chart.bar.fill")
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                    }
-                }
-
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        showingNewListSheet = true
+                        showingSettings = true
                     } label: {
-                        Image(systemName: "plus")
+                        Image(systemName: "gearshape.fill")
+                            .foregroundStyle(Color.kaiPurple)
                     }
                 }
             }
@@ -78,6 +78,12 @@ struct HomeView: View {
             .sheet(isPresented: $showingProgressSheet) {
                 FamilyProgressSheet()
             }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView(
+                    showingJoinSheet: $showingJoinSheet,
+                    showingProgressSheet: $showingProgressSheet
+                )
+            }
         }
     }
 
@@ -85,23 +91,26 @@ struct HomeView: View {
         VStack(spacing: 16) {
             Spacer()
 
-            Image(systemName: "checklist")
+            Text("✅")
                 .font(.system(size: 64))
-                .foregroundStyle(.secondary)
 
             Text("No Lists Yet")
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            Text("Tap + to create your first list")
+            Text("Tap the ＋ button to create your first list")
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
 
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
+        .padding(.top, 80)
     }
 }
+
+// MARK: - New List Sheet
 
 struct NewListSheet: View {
     @Environment(ListsViewModel.self) private var listsViewModel
@@ -140,11 +149,8 @@ struct NewListSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
+                    Button("Cancel") { dismiss() }
                 }
-
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Create") {
                         let _ = listsViewModel.createList(
