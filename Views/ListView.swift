@@ -77,7 +77,12 @@ struct ListView: View {
                 .toolbarBackground(Color(hex: list.color).opacity(0.10), for: .navigationBar)
                 .toolbarBackground(.visible, for: .navigationBar)
                 .navigationBarTitleDisplayMode(.large)
-                .navigationTitle(isEditingTitle ? "" : list.name)
+                .navigationTitle(list.name)
+                .onTapGesture {
+                    if canEditTitle(list) {
+                        startEditingTitle(list: list)
+                    }
+                }
                 .toolbar {
                     // Inline title editor (principal placement = center of nav bar)
                     if isEditingTitle {
@@ -95,25 +100,6 @@ struct ListView: View {
                                 .fontWeight(.semibold)
                         }
                     } else {
-                        // Tappable title hint (only for owner)
-                        if canEditTitle(list) {
-                            ToolbarItem(placement: .principal) {
-                                Button {
-                                    startEditingTitle(list: list)
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Text(list.name)
-                                            .font(.headline)
-                                            .foregroundStyle(.primary)
-                                        Image(systemName: "pencil")
-                                            .font(.caption)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
                                 Button {
