@@ -102,6 +102,14 @@ struct ListView: View {
                     } else {
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
+                                Button(role: .destructive) {
+                                    listsViewModel.resetList(listID)
+                                } label: {
+                                    Label("Reset List", systemImage: "arrow.counterclockwise")
+                                }
+
+                                Divider()
+
                                 Button {
                                     showingShareSheet = true
                                 } label: {

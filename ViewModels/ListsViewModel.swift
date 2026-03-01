@@ -93,6 +93,15 @@ class ListsViewModel {
         saveLists()
     }
 
+    /// Uncheck all tasks in a list so it can be reused, preserving the tasks themselves
+    func resetList(_ listID: UUID) {
+        guard let listIndex = lists.firstIndex(where: { $0.id == listID }) else { return }
+        for taskIndex in lists[listIndex].tasks.indices {
+            lists[listIndex].tasks[taskIndex].uncomplete()
+        }
+        saveLists()
+    }
+
     // MARK: - Confetti
 
     private func triggerConfetti(for taskID: UUID) {
