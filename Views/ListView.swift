@@ -10,8 +10,9 @@ struct ListView: View {
     @State private var showingShareSheet = false
     @State private var isEditingTitle = false
     @State private var editedTitle = ""
-    @State private var keyboardVisible = false  // driven by UIKit notifications — instant
-    @State private var isReordering = false     // toggles drag handles for reorder mode
+    @State private var keyboardVisible = false      // driven by UIKit notifications — instant
+    @State private var isReordering = false         // toggles drag handles for reorder mode
+    @State private var seenCompletedTrigger = 0    // snapshot on appear — only fire confetti on NEW completions
     @FocusState private var isInputFocused: Bool
     @FocusState private var isTitleFocused: Bool
 
@@ -239,9 +240,15 @@ struct ListView: View {
             spinSpeedMultiplier: confettiSpinSpeed
         )
         .overlay {
-            if listsViewModel.listCompletedTrigger > 0 {
+            // Only fire when trigger increments AFTER this view appeared —
+            // prevents premade/already-complete lists from firing on open
+            if listsViewModel.listCompletedTrigger > seenCompletedTrigger {
                 MultiFireworkOverlay(trigger: listsViewModel.listCompletedTrigger)
             }
+        }
+        .onAppear {
+            // Snapshot current trigger so pre-existing completions don't fire
+            seenCompletedTrigger = listsViewModel.listCompletedTrigger
         }
     }
 
