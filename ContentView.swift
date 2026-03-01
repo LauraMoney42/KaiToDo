@@ -24,13 +24,6 @@ struct ContentView: View {
         .animation(.easeInOut, value: userViewModel.isOnboarding)
         .animation(.easeInOut, value: hasSeenOnboarding)
         .preferredColorScheme(resolvedColorScheme)
-        .overlay {
-            if listsViewModel.showingConfetti {
-                ConfettiView()
-                    .allowsHitTesting(false)
-                    .transition(.opacity)
-            }
-        }
         .task {
             await requestNotificationPermission()
         }

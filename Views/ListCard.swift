@@ -25,13 +25,36 @@ struct ListCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text("\(list.completedTaskCount)/\(list.totalTaskCount)")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.9))
+                    // Progress badge — adapts to three states: empty, in-progress, all done
+                    if list.totalTaskCount == 0 {
+                        // No tasks yet — subtle hint label
+                        Text("No tasks yet")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.6))
+                    } else if list.completionProgress >= 1.0 {
+                        // All done — celebration pill
+                        HStack(spacing: 4) {
+                            Text("✅")
+                                .font(.caption2)
+                            Text("All done!")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(.white.opacity(0.25))
+                        .clipShape(Capsule())
+                        .foregroundStyle(.white)
+                    } else {
+                        // In progress — "3/5 done"
+                        Text("\(list.completedTaskCount)/\(list.totalTaskCount) done")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.9))
+                    }
 
                     Spacer()
 
-                    if list.totalTaskCount > 0 {
+                    if list.totalTaskCount > 0 && list.completionProgress < 1.0 {
                         Text("\(Int(list.completionProgress * 100))%")
                             .font(.caption)
                             .fontWeight(.medium)

@@ -10,15 +10,18 @@
 		07D228B9316E07F28657ED4E /* ShareListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21AB1341E467E051A22BF6C6 /* ShareListSheet.swift */; };
 		0C2E4379E894E7D7C87351F6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD43A6EA3F95F5847AC99F8 /* OnboardingView.swift */; };
 		0E0B3A26A892FAEC8ED67232 /* FamilyProgressSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */; };
+		34A564ACD5C3E2CAB7806A81 /* STYLE_GUIDE.md in Resources */ = {isa = PBXBuildFile; fileRef = 80EA170529EE92C280CE5622 /* STYLE_GUIDE.md */; };
 		4618551A65125BE9A213C208 /* KaiToDoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC16A31324E386221A3A06A7 /* KaiToDoApp.swift */; };
 		523C1433B4ED44006E3569D0 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CBBA02F83EF73A87DA237C2 /* NotificationService.swift */; };
 		5399585F5139F8867497CBEB /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2E2AC08E0E2DD821EB14252 /* StorageService.swift */; };
+		5C99A6A7976CC2CAAD12D2C9 /* KaiToDoIcon.png in Resources */ = {isa = PBXBuildFile; fileRef = 7F99DCE051CBB571A7FCFFCD /* KaiToDoIcon.png */; };
 		5FEEA52D46691D090CD9E381 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346AA4CCAF112BCCE98861E7 /* HomeView.swift */; };
 		6B09808C83398C425D0D1216 /* NicknameSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8BD83269D413416EAE9D734 /* NicknameSetupView.swift */; };
 		6FF7160634770AD2CF02E37A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F8E2DD1246059520DBECB43F /* Assets.xcassets */; };
 		742D3F5A25A6D0C521E6C59D /* ListsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6ADC69647A803E080834F2F /* ListsViewModel.swift */; };
 		7E0A3BAEB8881549E636071C /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */; };
 		939E334696FC62BC5B61FD8C /* KaiToDo.xcodeproj in Resources */ = {isa = PBXBuildFile; fileRef = FC7CDEBD4FA71A5628F0E253 /* KaiToDo.xcodeproj */; };
+		94E67110E82B85D9C6759BFD /* ARCHITECTURE.md in Resources */ = {isa = PBXBuildFile; fileRef = A8B3354335834B881D0FE2C4 /* ARCHITECTURE.md */; };
 		98A3D24A45939BBEBD96D1E1 /* ListCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FAB93258451155334D8663D /* ListCard.swift */; };
 		A20C5A9C5C178DF543359188 /* developerlog.txt in Resources */ = {isa = PBXBuildFile; fileRef = DD128B96D149FE0B486D6FFF /* developerlog.txt */; };
 		A46F5ECF6CB64FEE80034CA2 /* JoinListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366B83E09DBB0F370FACA67D /* JoinListSheet.swift */; };
@@ -45,12 +48,15 @@
 		61AFAB584A8E9D203E745768 /* TodoTask.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoTask.swift; sourceTree = "<group>"; };
 		6CBBA02F83EF73A87DA237C2 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
 		766896FCF7A13888E4B7395B /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		7F99DCE051CBB571A7FCFFCD /* KaiToDoIcon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = KaiToDoIcon.png; sourceTree = "<group>"; };
+		80EA170529EE92C280CE5622 /* STYLE_GUIDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = STYLE_GUIDE.md; sourceTree = "<group>"; };
 		8407CE2AC94B049CC2A7A059 /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
 		852147AD5553FB2F07BAAF3F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		91675FDEF26F75EF489AE287 /* CloudKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitService.swift; sourceTree = "<group>"; };
 		9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyProgressSheet.swift; sourceTree = "<group>"; };
 		A6ADC69647A803E080834F2F /* ListsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsViewModel.swift; sourceTree = "<group>"; };
+		A8B3354335834B881D0FE2C4 /* ARCHITECTURE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ARCHITECTURE.md; sourceTree = "<group>"; };
 		B0FA7D6B70C73CE20B8E1FF5 /* KaiToDo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KaiToDo.entitlements; sourceTree = "<group>"; };
 		B425E1AB4550151156ED1CD1 /* ListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListView.swift; sourceTree = "<group>"; };
 		B8BD83269D413416EAE9D734 /* NicknameSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NicknameSetupView.swift; sourceTree = "<group>"; };
@@ -65,6 +71,15 @@
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
+		1FAB18579AB28EBFA974FDE5 /* Docs */ = {
+			isa = PBXGroup;
+			children = (
+				A8B3354335834B881D0FE2C4 /* ARCHITECTURE.md */,
+				80EA170529EE92C280CE5622 /* STYLE_GUIDE.md */,
+			);
+			path = Docs;
+			sourceTree = "<group>";
+		};
 		2044C47B0CED1951D645D088 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -104,6 +119,7 @@
 		9158CA117D245C4AFA1F8D8F = {
 			isa = PBXGroup;
 			children = (
+				1FAB18579AB28EBFA974FDE5 /* Docs */,
 				FB1E174BA922441FD9E23BC0 /* KaiToDo */,
 				64AD175C3A50FEB892336D90 /* Models */,
 				5F4615CE290FDAE627114553 /* Resources */,
@@ -123,7 +139,7 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		A605ACF62F53D62600621699 /* Products */ = {
+		A605ACF82F53E34900621699 /* Products */ = {
 			isa = PBXGroup;
 			name = Products;
 			sourceTree = "<group>";
@@ -156,6 +172,7 @@
 				B0FA7D6B70C73CE20B8E1FF5 /* KaiToDo.entitlements */,
 				FC7CDEBD4FA71A5628F0E253 /* KaiToDo.xcodeproj */,
 				DC16A31324E386221A3A06A7 /* KaiToDoApp.swift */,
+				7F99DCE051CBB571A7FCFFCD /* KaiToDoIcon.png */,
 			);
 			name = KaiToDo;
 			path = .;
@@ -209,7 +226,7 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = A605ACF62F53D62600621699 /* Products */;
+					ProductGroup = A605ACF82F53E34900621699 /* Products */;
 					ProjectRef = FC7CDEBD4FA71A5628F0E253 /* KaiToDo.xcodeproj */;
 				},
 			);
@@ -225,8 +242,11 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				94E67110E82B85D9C6759BFD /* ARCHITECTURE.md in Resources */,
 				6FF7160634770AD2CF02E37A /* Assets.xcassets in Resources */,
 				939E334696FC62BC5B61FD8C /* KaiToDo.xcodeproj in Resources */,
+				5C99A6A7976CC2CAAD12D2C9 /* KaiToDoIcon.png in Resources */,
+				34A564ACD5C3E2CAB7806A81 /* STYLE_GUIDE.md in Resources */,
 				A20C5A9C5C178DF543359188 /* developerlog.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

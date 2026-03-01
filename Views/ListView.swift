@@ -26,28 +26,35 @@ struct ListView: View {
         ZStack {
             if let list = list {
                 VStack(spacing: 0) {
-                    // Task list — List is required for swipeActions to work correctly
-                    List {
-                        ForEach(list.tasks) { task in
-                            TaskRow(
-                                task: task,
-                                accentColor: Color(hex: list.color),
-                                onToggle: {
-                                    listsViewModel.toggleTask(
-                                        in: listID,
-                                        taskID: task.id,
-                                        userID: userViewModel.userID,
-                                        userName: userViewModel.nickname
+                    // Task list — List is required for swipeActions to work correctly.
+                    // When empty, swap in a friendly empty state instead of a blank list.
+                    Group {
+                        if list.tasks.isEmpty {
+                            emptyTasksView(accentColor: Color(hex: list.color))
+                        } else {
+                            List {
+                                ForEach(list.tasks) { task in
+                                    TaskRow(
+                                        task: task,
+                                        accentColor: Color(hex: list.color),
+                                        onToggle: {
+                                            listsViewModel.toggleTask(
+                                                in: listID,
+                                                taskID: task.id,
+                                                userID: userViewModel.userID,
+                                                userName: userViewModel.nickname
+                                            )
+                                        },
+                                        onDelete: {
+                                            listsViewModel.deleteTask(in: listID, taskID: task.id)
+                                        }
                                     )
-                                },
-                                onDelete: {
-                                    listsViewModel.deleteTask(in: listID, taskID: task.id)
+                                    .listRowInsets(EdgeInsets())
                                 }
-                            )
-                            .listRowInsets(EdgeInsets())
+                            }
+                            .listStyle(.plain)
                         }
                     }
-                    .listStyle(.plain)
 
                     // Add task input
                     HStack(spacing: 12) {
@@ -132,17 +139,37 @@ struct ListView: View {
                 .sheet(isPresented: $showingShareSheet) {
                     ShareListSheet(listID: listID)
                 }
-
-                // Confetti overlay
-                if listsViewModel.showingConfetti {
-                    ConfettiView()
-                        .allowsHitTesting(false)
-                }
             } else {
                 Text("List not found")
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    // MARK: - Empty State
+
+    /// Shown when the list has no tasks yet — centered, friendly, uses the list's accent color.
+    @ViewBuilder
+    private func emptyTasksView(accentColor: Color) -> some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Text("📝")
+                .font(.system(size: 56))
+
+            Text("No tasks yet!")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            Text("Add one below 👇")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     private func startEditingTitle(list: TodoList) {
