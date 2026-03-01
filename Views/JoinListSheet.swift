@@ -104,14 +104,50 @@ struct JoinListSheet: View {
         isJoining = true
         errorMessage = nil
 
-        // In a real implementation, this would call CloudKitService to find and join the list
-        // For now, we'll show an error since local-only joining isn't possible
         Task {
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // Simulate network delay
+            do {
+                // Find the shared list by invite code
+                if let (record, tasks) = try await CloudKitService.shared.fetchSharedList(byInviteCode: inviteCode) {
+                    // Create local copy of the shared list
+                    let sharedList = TodoList(
+                        name: record["name"] as? String ?? "Shared List",
+                        color: record["color"] as? String ?? "7161EF",
+                        tasks: tasks,
+                        cloudRecordID: record.recordID.recordName,
+                        isShared: true,
+                        shareType: .participant,
+                        ownerID: record["ownerID"] as? String,
+                        ownerName: record["ownerName"] as? String,
+                        inviteCode: inviteCode
+                    )
 
-            await MainActor.run {
-                isJoining = false
-                errorMessage = "Could not find list. Make sure the code is correct and you have an internet connection."
+                    // Add self as participant on CloudKit
+                    try await CloudKitService.shared.addParticipant(
+                        userID: userViewModel.userID,
+                        userName: userViewModel.nickname,
+                        toListRecord: record
+                    )
+
+                    await MainActor.run {
+                        // Check if we already have this list
+                        if !listsViewModel.lists.contains(where: { $0.cloudRecordID == record.recordID.recordName }) {
+                            listsViewModel.lists.append(sharedList)
+                            listsViewModel.saveLists()
+                        }
+                        isJoining = false
+                        dismiss()
+                    }
+                } else {
+                    await MainActor.run {
+                        isJoining = false
+                        errorMessage = "No list found with that code. Please check and try again."
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isJoining = false
+                    errorMessage = "Failed to join: \(error.localizedDescription)"
+                }
             }
         }
     }

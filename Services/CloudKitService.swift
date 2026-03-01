@@ -30,6 +30,64 @@ actor CloudKitService {
         try await container.userRecordID()
     }
 
+    // MARK: - Schema Initialization
+    // CloudKit auto-creates schema in Development when you save records
+    // This function creates and deletes sample records to initialize the schema
+
+    func initializeSchema() async throws {
+        print("🔧 Initializing CloudKit schema...")
+
+        // 1. Create SharedList record
+        let listRecord = CKRecord(recordType: sharedListType)
+        listRecord["name"] = "_schema_init"
+        listRecord["color"] = "000000"
+        listRecord["ownerID"] = "_init"
+        listRecord["ownerName"] = "_init"
+        listRecord["inviteCode"] = "XXXXXX"
+        listRecord["participants"] = ["_init"]
+
+        let savedList = try await publicDatabase.save(listRecord)
+        print("✓ SharedList schema created")
+
+        // 2. Create SharedTask record (with reference to list)
+        let taskRecord = CKRecord(recordType: sharedTaskType)
+        taskRecord["listID"] = CKRecord.Reference(recordID: savedList.recordID, action: .deleteSelf)
+        taskRecord["text"] = "_schema_init"
+        taskRecord["isCompleted"] = 0 as Int64
+        taskRecord["completedBy"] = "_init"
+        taskRecord["completedByName"] = "_init"
+        taskRecord["completedAt"] = Date()
+
+        let savedTask = try await publicDatabase.save(taskRecord)
+        print("✓ SharedTask schema created")
+
+        // 3. Create Invitation record
+        let inviteRecord = CKRecord(recordType: invitationType)
+        inviteRecord["code"] = "XXXXXX"
+        inviteRecord["listID"] = CKRecord.Reference(recordID: savedList.recordID, action: .deleteSelf)
+        inviteRecord["createdAt"] = Date()
+
+        let savedInvite = try await publicDatabase.save(inviteRecord)
+        print("✓ Invitation schema created")
+
+        // 4. Create UserProfile record
+        let profileRecord = CKRecord(recordType: userProfileType)
+        profileRecord["nickname"] = "_schema_init"
+        profileRecord["deviceToken"] = "_init"
+
+        let savedProfile = try await publicDatabase.save(profileRecord)
+        print("✓ UserProfile schema created")
+
+        // 5. Clean up - delete the test records
+        try await publicDatabase.deleteRecord(withID: savedTask.recordID)
+        try await publicDatabase.deleteRecord(withID: savedInvite.recordID)
+        try await publicDatabase.deleteRecord(withID: savedList.recordID)
+        try await publicDatabase.deleteRecord(withID: savedProfile.recordID)
+
+        print("✅ CloudKit schema initialized successfully!")
+        print("   You can now see the record types in CloudKit Dashboard")
+    }
+
     // MARK: - User Profile
 
     func saveUserProfile(_ profile: UserProfile) async throws {

@@ -42,7 +42,6 @@ struct ListView: View {
                 VStack(spacing: 0) {
                     // Task list — List is required for swipeActions to work correctly.
                     // When empty, swap in a friendly empty state instead of a blank list.
-                    // Tapping anywhere outside the keyboard dismisses it.
                     Group {
                         if list.tasks.isEmpty {
                             emptyTasksView(accentColor: Color(hex: list.color))
@@ -53,7 +52,7 @@ struct ListView: View {
                                         task: task,
                                         accentColor: Color(hex: list.color),
                                         onToggle: {
-                                            listsViewModel.toggleTask(
+                                            listsViewModel.toggleTaskWithSync(
                                                 in: listID,
                                                 taskID: task.id,
                                                 userID: userViewModel.userID,
@@ -106,7 +105,7 @@ struct ListView: View {
                     }
                 }
                 .toolbar {
-                    // Inline title editor (principal placement = center of nav bar)
+                    // Inline title editor
                     if isEditingTitle {
                         ToolbarItem(placement: .principal) {
                             TextField("List name", text: $editedTitle)
@@ -116,13 +115,12 @@ struct ListView: View {
                                 .onSubmit { commitTitleEdit(list: list) }
                                 .submitLabel(.done)
                         }
-
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") { commitTitleEdit(list: list) }
                                 .fontWeight(.semibold)
                         }
                     } else if keyboardVisible {
-                        // Notes-style: checkmark appears the moment keyboard shows, tap to dismiss
+                        // Notes-style: checkmark appears the moment keyboard shows
                         ToolbarItem(placement: .topBarTrailing) {
                             Button {
                                 isInputFocused = false
@@ -136,6 +134,20 @@ struct ListView: View {
                             }
                         }
                     } else {
+                        // Sync button for shared lists
+                        if list.isShared {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button { refreshList() } label: {
+                                    if listsViewModel.isSyncing {
+                                        ProgressView()
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                    }
+                                }
+                                .disabled(listsViewModel.isSyncing)
+                            }
+                        }
+
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
                                 Button(role: .destructive) {
@@ -153,6 +165,12 @@ struct ListView: View {
                                 }
 
                                 if list.isShared {
+                                    Button {
+                                        refreshList()
+                                    } label: {
+                                        Label("Refresh from Cloud", systemImage: "arrow.clockwise")
+                                    }
+
                                     Button {
                                         // Show participants
                                     } label: {
@@ -255,8 +273,14 @@ struct ListView: View {
     private func addTask() {
         let trimmed = newTaskText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        listsViewModel.addTask(to: listID, text: trimmed)
+        listsViewModel.addTaskWithSync(to: listID, text: trimmed)
         newTaskText = ""
+    }
+
+    private func refreshList() {
+        Task {
+            await listsViewModel.syncSharedLists()
+        }
     }
 }
 
