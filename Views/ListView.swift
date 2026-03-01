@@ -11,6 +11,7 @@ struct ListView: View {
     @State private var isEditingTitle = false
     @State private var editedTitle = ""
     @State private var keyboardVisible = false  // driven by UIKit notifications — instant
+    @State private var isReordering = false     // toggles drag handles for reorder mode
     @FocusState private var isInputFocused: Bool
     @FocusState private var isTitleFocused: Bool
 
@@ -66,9 +67,14 @@ struct ListView: View {
                                     .listRowInsets(EdgeInsets())
                                     .listRowSeparator(.hidden)
                                 }
+                                .onMove { source, destination in
+                                    listsViewModel.moveTask(in: listID, from: source, to: destination)
+                                }
                             }
                             .listStyle(.plain)
                             .scrollDismissesKeyboard(.immediately)
+                            // editMode only active during explicit reorder — keeps swipeActions working normally
+                            .environment(\.editMode, .constant(isReordering ? .active : .inactive))
                         }
                     }
 
@@ -150,6 +156,18 @@ struct ListView: View {
 
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
+                                // Reorder mode toggle — shows/hides drag handles
+                                Button {
+                                    isReordering.toggle()
+                                } label: {
+                                    Label(
+                                        isReordering ? "Done Reordering" : "Reorder Tasks",
+                                        systemImage: isReordering ? "checkmark" : "arrow.up.arrow.down"
+                                    )
+                                }
+
+                                Divider()
+
                                 Button(role: .destructive) {
                                     listsViewModel.resetList(listID)
                                 } label: {
