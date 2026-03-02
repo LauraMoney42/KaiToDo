@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		DD6B4E5F7A8C9D0E1F2A3B4C /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = CC5A3D4E6F7B8C9D0E1F2A3B /* Localizable.strings */; };
+
 		07D228B9316E07F28657ED4E /* ShareListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21AB1341E467E051A22BF6C6 /* ShareListSheet.swift */; };
 		0C2E4379E894E7D7C87351F6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBD43A6EA3F95F5847AC99F8 /* OnboardingView.swift */; };
 		0E0B3A26A892FAEC8ED67232 /* FamilyProgressSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */; };
@@ -20,14 +22,15 @@
 		6FF7160634770AD2CF02E37A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F8E2DD1246059520DBECB43F /* Assets.xcassets */; };
 		742D3F5A25A6D0C521E6C59D /* ListsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6ADC69647A803E080834F2F /* ListsViewModel.swift */; };
 		7E0A3BAEB8881549E636071C /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */; };
-		AA1B2C3D4E5F6A7B8C9D0E1F /* ConfettiSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */; };
 		939E334696FC62BC5B61FD8C /* KaiToDo.xcodeproj in Resources */ = {isa = PBXBuildFile; fileRef = FC7CDEBD4FA71A5628F0E253 /* KaiToDo.xcodeproj */; };
 		94E67110E82B85D9C6759BFD /* ARCHITECTURE.md in Resources */ = {isa = PBXBuildFile; fileRef = A8B3354335834B881D0FE2C4 /* ARCHITECTURE.md */; };
 		98A3D24A45939BBEBD96D1E1 /* ListCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FAB93258451155334D8663D /* ListCard.swift */; };
 		A20C5A9C5C178DF543359188 /* developerlog.txt in Resources */ = {isa = PBXBuildFile; fileRef = DD128B96D149FE0B486D6FFF /* developerlog.txt */; };
 		A46F5ECF6CB64FEE80034CA2 /* JoinListSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 366B83E09DBB0F370FACA67D /* JoinListSheet.swift */; };
+		AA1B2C3D4E5F6A7B8C9D0E1F /* ConfettiSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */; };
 		ACBB6F0A0E00EDE87801AC83 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 852147AD5553FB2F07BAAF3F /* ContentView.swift */; };
 		CE28D09A69D0F750BC2B9353 /* TodoTask.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61AFAB584A8E9D203E745768 /* TodoTask.swift */; };
+		CFB31F9D51AF465EBE6A0847 /* KindCodeSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD704AA8844F4D95A26AD31D /* KindCodeSplashView.swift */; };
 		D22EE8B96D038483215EB624 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 766896FCF7A13888E4B7395B /* SettingsView.swift */; };
 		D8A8421E135C28AE05FB0B44 /* ListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B425E1AB4550151156ED1CD1 /* ListView.swift */; };
 		ECED116AD066B5BD17C328DE /* UserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA78720BD91C69C4F54ABD0E /* UserViewModel.swift */; };
@@ -55,17 +58,21 @@
 		852147AD5553FB2F07BAAF3F /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		91675FDEF26F75EF489AE287 /* CloudKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitService.swift; sourceTree = "<group>"; };
 		9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
-		BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiSettingsView.swift; sourceTree = "<group>"; };
 		9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyProgressSheet.swift; sourceTree = "<group>"; };
 		A6ADC69647A803E080834F2F /* ListsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsViewModel.swift; sourceTree = "<group>"; };
 		A8B3354335834B881D0FE2C4 /* ARCHITECTURE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ARCHITECTURE.md; sourceTree = "<group>"; };
+		AA3F1B2C4D5E6F7A8B9C0D1E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		AD704AA8844F4D95A26AD31D /* KindCodeSplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KindCodeSplashView.swift; sourceTree = "<group>"; };
 		B0FA7D6B70C73CE20B8E1FF5 /* KaiToDo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KaiToDo.entitlements; sourceTree = "<group>"; };
 		B425E1AB4550151156ED1CD1 /* ListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListView.swift; sourceTree = "<group>"; };
 		B8BD83269D413416EAE9D734 /* NicknameSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NicknameSetupView.swift; sourceTree = "<group>"; };
+		BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiSettingsView.swift; sourceTree = "<group>"; };
+		BB4F2C3D5E6F7A8B9C0D1E2F /* es */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = es; path = es.lproj/Localizable.strings; sourceTree = "<group>"; };
 		C2E2AC08E0E2DD821EB14252 /* StorageService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		DC16A31324E386221A3A06A7 /* KaiToDoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaiToDoApp.swift; sourceTree = "<group>"; };
 		DD128B96D149FE0B486D6FFF /* developerlog.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = developerlog.txt; sourceTree = "<group>"; };
 		DD756207D5A84BAB3848A4E8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+
 		EA78720BD91C69C4F54ABD0E /* UserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserViewModel.swift; sourceTree = "<group>"; };
 		F8E2DD1246059520DBECB43F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FBD43A6EA3F95F5847AC99F8 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
@@ -104,6 +111,7 @@
 			isa = PBXGroup;
 			children = (
 				F8E2DD1246059520DBECB43F /* Assets.xcassets */,
+				CC5A3D4E6F7B8C9D0E1F2A3B /* Localizable.strings */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -150,6 +158,7 @@
 			isa = PBXGroup;
 			children = (
 				9A6FDEC93F445B05C4D6BC38 /* ConfettiView.swift */,
+				AD704AA8844F4D95A26AD31D /* KindCodeSplashView.swift */,
 				BB2C3D4E5F6A7B8C9D0E1F2A /* ConfettiSettingsView.swift */,
 				9FA5FD8603A9C7DE83F1C28C /* FamilyProgressSheet.swift */,
 				346AA4CCAF112BCCE98861E7 /* HomeView.swift */,
@@ -172,6 +181,7 @@
 				852147AD5553FB2F07BAAF3F /* ContentView.swift */,
 				DD128B96D149FE0B486D6FFF /* developerlog.txt */,
 				DD756207D5A84BAB3848A4E8 /* Info.plist */,
+
 				B0FA7D6B70C73CE20B8E1FF5 /* KaiToDo.entitlements */,
 				FC7CDEBD4FA71A5628F0E253 /* KaiToDo.xcodeproj */,
 				DC16A31324E386221A3A06A7 /* KaiToDoApp.swift */,
@@ -218,6 +228,7 @@
 			knownRegions = (
 				Base,
 				en,
+				es,
 			);
 			mainGroup = 9158CA117D245C4AFA1F8D8F;
 			minimizedProjectReferenceProxies = 1;
@@ -244,6 +255,8 @@
 				6FF7160634770AD2CF02E37A /* Assets.xcassets in Resources */,
 				939E334696FC62BC5B61FD8C /* KaiToDo.xcodeproj in Resources */,
 				5C99A6A7976CC2CAAD12D2C9 /* KaiToDoIcon.png in Resources */,
+				DD6B4E5F7A8C9D0E1F2A3B4C /* Localizable.strings in Resources */,
+
 				34A564ACD5C3E2CAB7806A81 /* STYLE_GUIDE.md in Resources */,
 				A20C5A9C5C178DF543359188 /* developerlog.txt in Resources */,
 			);
@@ -258,6 +271,7 @@
 			files = (
 				F28EA25D0D99B8537EFF4EE4 /* CloudKitService.swift in Sources */,
 				7E0A3BAEB8881549E636071C /* ConfettiView.swift in Sources */,
+				CFB31F9D51AF465EBE6A0847 /* KindCodeSplashView.swift in Sources */,
 				AA1B2C3D4E5F6A7B8C9D0E1F /* ConfettiSettingsView.swift in Sources */,
 				ACBB6F0A0E00EDE87801AC83 /* ContentView.swift in Sources */,
 				0E0B3A26A892FAEC8ED67232 /* FamilyProgressSheet.swift in Sources */,
@@ -282,6 +296,18 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		CC5A3D4E6F7B8C9D0E1F2A3B /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				AA3F1B2C4D5E6F7A8B9C0D1E /* en */,
+				BB4F2C3D5E6F7A8B9C0D1E2F /* es */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		41C91E1B62D3E5E27B2194C2 /* Release */ = {

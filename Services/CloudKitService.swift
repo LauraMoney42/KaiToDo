@@ -150,18 +150,40 @@ actor CloudKitService {
         try await publicDatabase.save(record)
     }
 
+    /// Persists the earned star count for a shared list to CloudKit so all
+    /// participants see the same running total.
+    func updateListStarCount(cloudRecordID: String, starCount: Int) async throws {
+        let recordID = CKRecord.ID(recordName: cloudRecordID)
+        let record = try await publicDatabase.record(for: recordID)
+        record["starCount"] = Int64(starCount)
+        try await publicDatabase.save(record)
+    }
+
     // MARK: - Tasks
 
+    /// Upsert: updates the existing CloudKit record if task.cloudRecordID is set, otherwise creates a new one.
+    /// Always creating a new record was the root cause of duplicate tasks appearing on participant sync.
     func saveTask(_ task: TodoTask, listRecordID: CKRecord.ID) async throws -> CKRecord {
-        let record = CKRecord(recordType: sharedTaskType)
-        record["listID"] = CKRecord.Reference(recordID: listRecordID, action: .deleteSelf)
-        record["text"] = task.text
-        record["isCompleted"] = task.isCompleted ? 1 : 0
-        record["completedBy"] = task.completedBy
-        record["completedByName"] = task.completedByName
-        record["completedAt"] = task.completedAt
-
-        return try await publicDatabase.save(record)
+        if let existingRecordName = task.cloudRecordID {
+            // Update existing record — no duplicate created
+            let recordID = CKRecord.ID(recordName: existingRecordName)
+            let existingRecord = try await publicDatabase.record(for: recordID)
+            existingRecord["isCompleted"] = task.isCompleted ? 1 : 0
+            existingRecord["completedBy"] = task.completedBy
+            existingRecord["completedByName"] = task.completedByName
+            existingRecord["completedAt"] = task.completedAt
+            return try await publicDatabase.save(existingRecord)
+        } else {
+            // First save — create new record
+            let record = CKRecord(recordType: sharedTaskType)
+            record["listID"] = CKRecord.Reference(recordID: listRecordID, action: .deleteSelf)
+            record["text"] = task.text
+            record["isCompleted"] = task.isCompleted ? 1 : 0
+            record["completedBy"] = task.completedBy
+            record["completedByName"] = task.completedByName
+            record["completedAt"] = task.completedAt
+            return try await publicDatabase.save(record)
+        }
     }
 
     func fetchTasks(forListID listID: CKRecord.ID) async throws -> [TodoTask] {
@@ -176,6 +198,7 @@ actor CloudKitService {
             if case .success(let record) = result {
                 let task = TodoTask(
                     id: UUID(),
+                    cloudRecordID: record.recordID.recordName, // store so future syncs can update, not insert
                     text: record["text"] as? String ?? "",
                     isCompleted: (record["isCompleted"] as? Int64 ?? 0) == 1,
                     completedBy: record["completedBy"] as? String,

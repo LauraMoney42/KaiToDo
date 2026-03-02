@@ -12,18 +12,12 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // ⏱ LAUNCH TIMING — remove after kai-launch-007 diagnosis
-        print("⏱ T+0.000 AppDelegate.didFinishLaunching START \(Date())")
         // Register for remote notifications — required for CloudKit subscriptions to deliver pushes
         application.registerForRemoteNotifications()
-        print("⏱ T+? registerForRemoteNotifications() DONE \(Date())")
         // Set up CloudKit subscriptions (idempotent — CloudKit ignores duplicate subscription IDs)
         Task {
-            print("⏱ T+? CloudKitService.shared access START \(Date())")
             try? await CloudKitService.shared.setupSubscriptions()
-            print("⏱ T+? CloudKitService.setupSubscriptions DONE \(Date())")
         }
-        print("⏱ T+? AppDelegate.didFinishLaunching RETURN \(Date())")
         return true
     }
 

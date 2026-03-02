@@ -2,6 +2,9 @@ import Foundation
 
 struct TodoTask: Identifiable, Codable, Equatable, Hashable {
     let id: UUID
+    /// CloudKit record name — set after first save to CloudKit, used to UPDATE rather than insert on
+    /// subsequent syncs. Without this, every toggle creates a duplicate task record in CloudKit.
+    var cloudRecordID: String?
     var text: String
     var isCompleted: Bool
     var completedBy: String?
@@ -12,6 +15,7 @@ struct TodoTask: Identifiable, Codable, Equatable, Hashable {
 
     init(
         id: UUID = UUID(),
+        cloudRecordID: String? = nil,
         text: String,
         isCompleted: Bool = false,
         completedBy: String? = nil,
@@ -21,6 +25,7 @@ struct TodoTask: Identifiable, Codable, Equatable, Hashable {
         modifiedAt: Date = Date()
     ) {
         self.id = id
+        self.cloudRecordID = cloudRecordID
         self.text = text
         self.isCompleted = isCompleted
         self.completedBy = completedBy

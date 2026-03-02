@@ -4,11 +4,10 @@ struct SettingsView: View {
     @Environment(UserViewModel.self) private var userViewModel
     @Environment(\.dismiss) private var dismiss
 
-    @Binding var showingJoinSheet: Bool
-    @Binding var showingProgressSheet: Bool
-
     @AppStorage("kaiColorScheme") private var colorSchemeRaw: String = "system"
     @State private var showingOnboarding = false
+    @State private var showingJoinSheet = false
+    @State private var showingProgressSheet = false
 
     var body: some View {
         NavigationStack {
@@ -27,20 +26,14 @@ struct SettingsView: View {
                 // MARK: - Lists & Buddies
                 Section {
                     Button {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showingJoinSheet = true
-                        }
+                        showingJoinSheet = true
                     } label: {
                         Label("Join a List", systemImage: "person.badge.plus")
                             .foregroundStyle(.primary)
                     }
 
                     Button {
-                        dismiss()
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showingProgressSheet = true
-                        }
+                        showingProgressSheet = true
                     } label: {
                         Label("Family Progress", systemImage: "chart.bar.fill")
                             .foregroundStyle(.primary)
@@ -48,7 +41,7 @@ struct SettingsView: View {
                 } header: {
                     Text("Lists & Buddies")
                 } footer: {
-                    Text("Join a shared list with an invite code, or see how your whole family is doing.")
+                    Text("Join a shared list with an invite code and see how your whole family is doing.")
                 }
 
                 // MARK: - Appearance
@@ -89,10 +82,16 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     HStack {
-                        Text("Made with")
-                        Spacer()
-                        Text("💜 by KindCode")
+                        Text("Created by ")
                             .foregroundStyle(.secondary)
+                        + Text("KindCode")
+                            .foregroundStyle(Color.kaiTeal)
+                        Spacer()
+                    }
+                    .onTapGesture {
+                        if let url = URL(string: "https://kindcode.us") {
+                            UIApplication.shared.open(url)
+                        }
                     }
                 }
             }
@@ -108,6 +107,12 @@ struct SettingsView: View {
                     showingOnboarding = false
                 }
             }
+            .sheet(isPresented: $showingJoinSheet) {
+                JoinListSheet()
+            }
+            .sheet(isPresented: $showingProgressSheet) {
+                FamilyProgressSheet()
+            }
         }
     }
 
@@ -117,9 +122,6 @@ struct SettingsView: View {
 }
 
 #Preview {
-    SettingsView(
-        showingJoinSheet: .constant(false),
-        showingProgressSheet: .constant(false)
-    )
-    .environment(UserViewModel())
+    SettingsView()
+        .environment(UserViewModel())
 }

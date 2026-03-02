@@ -1,0 +1,168 @@
+/* KaiToDo — Spanish (Español) Localizable.strings */
+
+// MARK: - Common
+"Done" = "Listo";
+"Cancel" = "Cancelar";
+"OK" = "OK";
+"Settings" = "Ajustes";
+"Delete" = "Eliminar";
+
+// MARK: - Home
+"Kai To Do ✅" = "Kai To Do ✅";
+"No Lists Yet" = "Sin listas aún";
+"Tap the ＋ button to create your first list" = "Toca el botón ＋ para crear tu primera lista";
+"New List" = "Nueva lista";
+"List Name" = "Nombre de la lista";
+"Enter list name" = "Escribe el nombre de la lista";
+"Color" = "Color";
+"Create" = "Crear";
+
+// MARK: - List View
+"Add a task..." = "Agregar una tarea...";
+"No tasks yet!" = "¡Sin tareas aún!";
+"Add one below 👇" = "Agrega una abajo 👇";
+"List name" = "Nombre de la lista";
+"Rename List" = "Renombrar lista";
+"Reset List" = "Reiniciar lista";
+"Share List" = "Compartir lista";
+"Refresh from Cloud" = "Actualizar desde la nube";
+"List not found" = "Lista no encontrada";
+
+// MARK: - Task Row
+"Completed by %@" = "Completado por %@";
+
+// MARK: - List Card
+"No tasks yet" = "Sin tareas aún";
+"All done!" = "¡Todo listo!";
+"%lld/%lld done" = "%lld/%lld completado";
+"Participants (%lld)" = "Participantes (%lld)";
+
+// MARK: - Share Sheet
+"Share \"%@\" with family & friends" = "Compartir \"%@\" con familia y amigos";
+"Invite Code" = "Código de invitación";
+"Copied!" = "¡Copiado!";
+"Copy Code" = "Copiar código";
+"Generate Invite Code" = "Generar código de invitación";
+"Participants" = "Participantes";
+"Share via Messages" = "Compartir por Mensajes";
+"Failed to generate invite code" = "Error al generar el código de invitación";
+
+// MARK: - Join Sheet
+"Join a List" = "Unirse a una lista";
+"Enter the 6-character invite code\nshared with you" = "Ingresa el código de invitación de 6 caracteres\nque te compartieron";
+"INVITE CODE" = "CÓDIGO DE INVITACIÓN";
+"Join List" = "Unirse a la lista";
+"No list found with that code. Please check and try again." = "No se encontró ninguna lista con ese código. Verifica e intenta de nuevo.";
+
+// MARK: - Settings
+"Getting Started" = "Primeros pasos";
+"How to Use Kai To Do" = "Cómo usar Kai To Do";
+"Lists & Buddies" = "Listas y amigos";
+"Join a shared list with an invite code and see how your whole family is doing." = "Únete a una lista compartida con un código y ve el progreso de tu familia.";
+"Family Progress" = "Progreso familiar";
+"Appearance" = "Apariencia";
+"Color Scheme" = "Esquema de color";
+"System" = "Sistema";
+"Light" = "Claro";
+"Dark" = "Oscuro";
+"Feedback" = "Comentarios";
+"Report a Bug or Request a Feature" = "Reportar un error o sugerir una función";
+"Your feedback goes directly to the KindCode team. We read every message! 💙" = "Tus comentarios van directo al equipo de KindCode. ¡Leemos cada mensaje! 💙";
+"About" = "Acerca de";
+"Version" = "Versión";
+"Made with" = "Hecho con";
+
+// MARK: - Family Progress
+"Tasks Completed" = "Tareas completadas";
+"Shared Lists" = "Listas compartidas";
+"No shared lists yet" = "Sin listas compartidas aún";
+"Share a list to track family progress" = "Comparte una lista para ver el progreso familiar";
+"All Lists" = "Todas las listas";
+
+// MARK: - Onboarding / Nickname
+"Welcome to Kai To Do!" = "¡Bienvenido a Kai To Do!";
+"What should we call you?" = "¿Cómo te llamamos?";
+"Your nickname" = "Tu apodo";
+"2–20 characters" = "2–20 caracteres";
+"Let's Go! 🚀" = "¡Vamos! 🚀";
+
+// MARK: - Onboarding Cards
+"The to-do app that's actually fun." = "La app de tareas que es realmente divertida.";
+"Keep track of everything on your plate" = "Lleva el control de todo lo que tienes pendiente";
+"Share lists with family & friends" = "Comparte listas con familia y amigos";
+"Celebrate every completed task 🎉" = "Celebra cada tarea completada 🎉";
+"Tap anywhere to continue" = "Toca en cualquier lugar para continuar";
+
+"Creating a List" = "Crear una lista";
+"Lists are where the magic happens." = "Las listas son donde ocurre la magia.";
+"Tap the + button at the bottom of the screen" = "Toca el botón + en la parte inferior de la pantalla";
+"Give your list a name and pick a color" = "Dale un nombre a tu lista y elige un color";
+"Tap Create — and you're done!" = "Toca Crear — ¡y listo!";
+
+"Adding Tasks" = "Agregar tareas";
+"Fill your list with things to get done." = "Llena tu lista con cosas por hacer.";
+"Open any list and tap Add a task" = "Abre cualquier lista y toca Agregar una tarea";
+"Type what you need to do and hit return" = "Escribe lo que necesitas hacer y presiona regresar";
+"Tap the circle to check it off — confetti incoming! 🎊" = "Toca el círculo para marcarla — ¡confeti en camino! 🎊";
+
+"Adding a Buddy" = "Agregar un compañero";
+"Lists are better together." = "Las listas son mejores en compañía.";
+"Open a list and tap the share icon" = "Abre una lista y toca el ícono de compartir";
+"Share the invite code with a friend or family member" = "Comparte el código de invitación con un amigo o familiar";
+"They open Settings and tap Join a List" = "Ellos abren Ajustes y tocan Unirse a una lista";
+"Now you're both on the same list! 🥳" = "¡Ahora los dos están en la misma lista! 🥳";
+
+"Share via Messages" = "Compartir por Mensajes";
+"Inviting someone is easy as texting." = "Invitar a alguien es tan fácil como enviar un mensaje.";
+"Tap the share icon on any list" = "Toca el ícono de compartir en cualquier lista";
+"Choose Messages to send the invite code" = "Elige Mensajes para enviar el código de invitación";
+"Your buddy taps the link or enters the code in Settings" = "Tu compañero toca el enlace o ingresa el código en Ajustes";
+"Done — they're on the list instantly!" = "¡Listo — ya están en la lista al instante!";
+
+"Always in Sync" = "Siempre sincronizado";
+"Everyone sees changes in real time." = "Todos ven los cambios en tiempo real.";
+"Check off a task — your buddy sees it immediately" = "Marca una tarea — tu compañero la ve de inmediato";
+"No manual refresh needed" = "No se necesita actualizar manualmente";
+"Works in the background, even when the app is closed" = "Funciona en segundo plano, incluso cuando la app está cerrada";
+"Shared lists are always up to date 🔄" = "Las listas compartidas siempre están al día 🔄";
+
+// MARK: - Gold Star Onboarding Card
+"Earn Gold Stars!" = "¡Gana Estrellas Doradas!";
+"Set a goal, earn stars, get your reward." = "Establece una meta, gana estrellas, obtén tu recompensa.";
+"Set a Star Goal — choose how many stars to earn toward a reward" = "Establece una Meta — elige cuántas estrellas ganar para tu recompensa";
+"Add Your Reward — type in what you're working toward" = "Agrega tu Recompensa — escribe por qué estás trabajando";
+"Earn Stars — complete tasks to earn ⭐, finish a whole list for a bonus star" = "Gana Estrellas — completa tareas para ganar ⭐, termina toda la lista para una estrella extra";
+"Track Your Progress — tap the ⭐ counter anytime to see stars vs. your goal" = "Sigue tu Progreso — toca el contador ⭐ para ver tus estrellas vs. tu meta";
+
+"You're All Set!" = "¡Todo listo!";
+"Time to get things done." = "Es hora de ponerse en marcha.";
+"Tap + to make your first list" = "Toca + para crear tu primera lista";
+"Check off tasks as you go" = "Marca las tareas a medida que las completes";
+"Find Settings at the top right anytime" = "Encuentra Ajustes en la esquina superior derecha en cualquier momento";
+"Tap to close" = "Toca para cerrar";
+"Tap to get started!" = "¡Toca para comenzar!";
+
+// MARK: - Gold Star UI (StarBreakdownSheet, StarGoalSheet, StarProgressCard)
+"⭐ Stars" = "⭐ Estrellas";
+"No Stars Yet" = "Sin estrellas aún";
+"Complete a whole list to earn your first ⭐" = "Completa una lista para ganar tu primera ⭐";
+"Mark reward given" = "Marcar recompensa entregada";
+"Reward given ✓" = "Recompensa entregada ✓";
+"⭐ Star Goal" = "⭐ Meta de estrellas";
+"Set a Star Goal" = "Establecer una meta de estrellas";
+"Set Star Goal" = "Establecer meta de estrellas";
+"Goal" = "Meta";
+"Save" = "Guardar";
+"Reward" = "Recompensa";
+"e.g. 🍕 Pizza night!" = "p. ej. 🍕 ¡Noche de pizza!";
+"Reward unlocked: %@" = "Recompensa desbloqueada: %@";
+"Reward: %@" = "Recompensa: %@";
+"%lld ⭐" = "%lld ⭐";
+"%lld / %lld ⭐" = "%lld / %lld ⭐";
+"Earn %lld ⭐ completing the list once to unlock the reward." = "Gana %lld ⭐ completando la lista una vez para desbloquear la recompensa.";
+"Earn %lld ⭐ by completing the list %lld times to unlock the reward." = "Gana %lld ⭐ completando la lista %lld veces para desbloquear la recompensa.";
+
+// MARK: - Confetti Settings
+"Test Confetti" = "Probar confeti";
+"Reset to Defaults" = "Restablecer valores";
+"Changes apply immediately to the task completion animation." = "Los cambios se aplican de inmediato a la animación de tareas completadas.";

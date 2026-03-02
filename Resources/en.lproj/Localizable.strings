@@ -1,0 +1,171 @@
+/* KaiToDo — English (Base) Localizable.strings
+   SwiftUI Text(), Label(), Button(), TextField() automatically use LocalizedStringKey,
+   so these strings are picked up without any code changes in the views. */
+
+// MARK: - Common
+"Done" = "Done";
+"Cancel" = "Cancel";
+"OK" = "OK";
+"Settings" = "Settings";
+"Delete" = "Delete";
+
+// MARK: - Home
+"Kai To Do ✅" = "Kai To Do ✅";
+"No Lists Yet" = "No Lists Yet";
+"Tap the ＋ button to create your first list" = "Tap the ＋ button to create your first list";
+"New List" = "New List";
+"List Name" = "List Name";
+"Enter list name" = "Enter list name";
+"Color" = "Color";
+"Create" = "Create";
+
+// MARK: - List View
+"Add a task..." = "Add a task...";
+"No tasks yet!" = "No tasks yet!";
+"Add one below 👇" = "Add one below 👇";
+"List name" = "List name";
+"Rename List" = "Rename List";
+"Reset List" = "Reset List";
+"Share List" = "Share List";
+"Refresh from Cloud" = "Refresh from Cloud";
+"List not found" = "List not found";
+
+// MARK: - Task Row
+"Completed by %@" = "Completed by %@";
+
+// MARK: - List Card
+"No tasks yet" = "No tasks yet";
+"All done!" = "All done!";
+// Int interpolation in LocalizedStringKey uses %lld (64-bit Int) on iOS
+"%lld/%lld done" = "%lld/%lld done";
+"Participants (%lld)" = "Participants (%lld)";
+
+// MARK: - Share Sheet
+"Share \"%@\" with family & friends" = "Share \"%@\" with family & friends";
+"Invite Code" = "Invite Code";
+"Copied!" = "Copied!";
+"Copy Code" = "Copy Code";
+"Generate Invite Code" = "Generate Invite Code";
+"Participants" = "Participants";
+"Share via Messages" = "Share via Messages";
+"Failed to generate invite code" = "Failed to generate invite code";
+
+// MARK: - Join Sheet
+"Join a List" = "Join a List";
+"Enter the 6-character invite code\nshared with you" = "Enter the 6-character invite code\nshared with you";
+"INVITE CODE" = "INVITE CODE";
+"Join List" = "Join List";
+"No list found with that code. Please check and try again." = "No list found with that code. Please check and try again.";
+
+// MARK: - Settings
+"Getting Started" = "Getting Started";
+"How to Use Kai To Do" = "How to Use Kai To Do";
+"Lists & Buddies" = "Lists & Buddies";
+"Join a shared list with an invite code, see how your whole family is doing, or initialize CloudKit for development." = "Join a shared list with an invite code, see how your whole family is doing, or initialize CloudKit for development.";
+"Family Progress" = "Family Progress";
+"Appearance" = "Appearance";
+"Color Scheme" = "Color Scheme";
+"System" = "System";
+"Light" = "Light";
+"Dark" = "Dark";
+"Feedback" = "Feedback";
+"Report a Bug or Request a Feature" = "Report a Bug or Request a Feature";
+"Your feedback goes directly to the KindCode team. We read every message! 💙" = "Your feedback goes directly to the KindCode team. We read every message! 💙";
+"About" = "About";
+"Version" = "Version";
+"Made with" = "Made with";
+
+// MARK: - Family Progress
+"Tasks Completed" = "Tasks Completed";
+"Shared Lists" = "Shared Lists";
+"No shared lists yet" = "No shared lists yet";
+"Share a list to track family progress" = "Share a list to track family progress";
+"All Lists" = "All Lists";
+
+// MARK: - Onboarding / Nickname
+"Welcome to Kai To Do!" = "Welcome to Kai To Do!";
+"What should we call you?" = "What should we call you?";
+"Your nickname" = "Your nickname";
+"2–20 characters" = "2–20 characters";
+"Let's Go! 🚀" = "Let's Go! 🚀";
+
+// MARK: - Onboarding Cards
+"The to-do app that's actually fun." = "The to-do app that's actually fun.";
+"Keep track of everything on your plate" = "Keep track of everything on your plate";
+"Share lists with family & friends" = "Share lists with family & friends";
+"Celebrate every completed task 🎉" = "Celebrate every completed task 🎉";
+"Tap anywhere to continue" = "Tap anywhere to continue";
+
+"Creating a List" = "Creating a List";
+"Lists are where the magic happens." = "Lists are where the magic happens.";
+"Tap the + button at the bottom of the screen" = "Tap the + button at the bottom of the screen";
+"Give your list a name and pick a color" = "Give your list a name and pick a color";
+"Tap Create — and you're done!" = "Tap Create — and you're done!";
+
+"Adding Tasks" = "Adding Tasks";
+"Fill your list with things to get done." = "Fill your list with things to get done.";
+"Open any list and tap Add a task" = "Open any list and tap Add a task";
+"Type what you need to do and hit return" = "Type what you need to do and hit return";
+"Tap the circle to check it off — confetti incoming! 🎊" = "Tap the circle to check it off — confetti incoming! 🎊";
+
+"Adding a Buddy" = "Adding a Buddy";
+"Lists are better together." = "Lists are better together.";
+"Open a list and tap the share icon" = "Open a list and tap the share icon";
+"Share the invite code with a friend or family member" = "Share the invite code with a friend or family member";
+"They open Settings and tap Join a List" = "They open Settings and tap Join a List";
+"Now you're both on the same list! 🥳" = "Now you're both on the same list! 🥳";
+
+"Share via Messages" = "Share via Messages";
+"Inviting someone is easy as texting." = "Inviting someone is easy as texting.";
+"Tap the share icon on any list" = "Tap the share icon on any list";
+"Choose Messages to send the invite code" = "Choose Messages to send the invite code";
+"Your buddy taps the link or enters the code in Settings" = "Your buddy taps the link or enters the code in Settings";
+"Done — they're on the list instantly!" = "Done — they're on the list instantly!";
+
+"Always in Sync" = "Always in Sync";
+"Everyone sees changes in real time." = "Everyone sees changes in real time.";
+"Check off a task — your buddy sees it immediately" = "Check off a task — your buddy sees it immediately";
+"No manual refresh needed" = "No manual refresh needed";
+"Works in the background, even when the app is closed" = "Works in the background, even when the app is closed";
+"Shared lists are always up to date 🔄" = "Shared lists are always up to date 🔄";
+
+// MARK: - Gold Star Onboarding Card
+"Earn Gold Stars!" = "Earn Gold Stars!";
+"Set a goal, earn stars, get your reward." = "Set a goal, earn stars, get your reward.";
+"Set a Star Goal — choose how many stars to earn toward a reward" = "Set a Star Goal — choose how many stars to earn toward a reward";
+"Add Your Reward — type in what you're working toward" = "Add Your Reward — type in what you're working toward";
+"Earn Stars — complete tasks to earn ⭐, finish a whole list for a bonus star" = "Earn Stars — complete tasks to earn ⭐, finish a whole list for a bonus star";
+"Track Your Progress — tap the ⭐ counter anytime to see stars vs. your goal" = "Track Your Progress — tap the ⭐ counter anytime to see stars vs. your goal";
+
+"You're All Set!" = "You're All Set!";
+"Time to get things done." = "Time to get things done.";
+"Tap + to make your first list" = "Tap + to make your first list";
+"Check off tasks as you go" = "Check off tasks as you go";
+"Find Settings at the top right anytime" = "Find Settings at the top right anytime";
+"Tap to close" = "Tap to close";
+"Tap to get started!" = "Tap to get started!";
+
+// MARK: - Gold Star UI (StarBreakdownSheet, StarGoalSheet, StarProgressCard)
+"⭐ Stars" = "⭐ Stars";
+"No Stars Yet" = "No Stars Yet";
+"Complete a whole list to earn your first ⭐" = "Complete a whole list to earn your first ⭐";
+"Mark reward given" = "Mark reward given";
+"Reward given ✓" = "Reward given ✓";
+"⭐ Star Goal" = "⭐ Star Goal";
+"Set a Star Goal" = "Set a Star Goal";
+"Set Star Goal" = "Set Star Goal";
+"Goal" = "Goal";
+"Save" = "Save";
+"Reward" = "Reward";
+"e.g. 🍕 Pizza night!" = "e.g. 🍕 Pizza night!";
+"Reward unlocked: %@" = "Reward unlocked: %@";
+"Reward: %@" = "Reward: %@";
+"%lld ⭐" = "%lld ⭐";
+"%lld / %lld ⭐" = "%lld / %lld ⭐";
+"Earn %lld ⭐ completing the list once to unlock the reward." = "Earn %lld ⭐ completing the list once to unlock the reward.";
+"Earn %lld ⭐ by completing the list %lld times to unlock the reward." = "Earn %lld ⭐ by completing the list %lld times to unlock the reward.";
+
+// MARK: - Confetti Settings
+"Test Confetti" = "Test Confetti";
+"Reset to Defaults" = "Reset to Defaults";
+"Changes apply immediately to the task completion animation." = "Changes apply immediately to the task completion animation.";

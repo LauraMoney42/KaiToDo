@@ -48,6 +48,9 @@ struct TaskRow: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 16)
+        // Expand hit-test area to the full row — prevents missed taps on the Spacer
+        // gap between text and the row edge, improving perceived tap responsiveness.
+        .contentShape(Rectangle())
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive, action: onDelete) {
                 Label("Delete", systemImage: "trash.fill")

@@ -120,14 +120,14 @@ struct ShareListSheet: View {
                     .padding(.horizontal, 32)
                 }
 
-                // Share button — sends deep link so recipient taps & auto-joins
-                if let code = inviteCode ?? list?.inviteCode,
-                   let deepLink = URL(string: "kaitodo://join/\(code)") {
-                    ShareLink(
-                        item: deepLink,
-                        subject: Text("Join my KaiToDo list"),
-                        message: Text("Tap to join \"\(list?.name ?? "my list")\" in KaiToDo!")
-                    ) {
+                // Share button — uses UIActivityViewController instead of ShareLink so we
+                // get completionWithItemsHandler and can auto-dismiss this sheet after sending.
+                // ShareLink has no completion callback, so the sheet stayed open after Messages send.
+                if let code = inviteCode ?? list?.inviteCode {
+                    let shareText = "Join my KaiToDo list \"\(list?.name ?? "")\" — tap to open: kaitodo://join/\(code)"
+                    Button {
+                        presentShareSheet(text: shareText)
+                    } label: {
                         Label("Share via Messages", systemImage: "message.fill")
                             .fontWeight(.semibold)
                             .foregroundStyle(.white)
@@ -150,6 +150,32 @@ struct ShareListSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    /// Present UIActivityViewController so we get a completion callback.
+    /// Dismisses ShareListSheet automatically when the user completes a share action
+    /// (e.g. sends via Messages). ShareLink has no completion handler so it left the
+    /// sheet open — this was the root cause of the bug.
+    private func presentShareSheet(text: String) {
+        let activityVC = UIActivityViewController(
+            activityItems: [text],
+            applicationActivities: nil
+        )
+        activityVC.completionWithItemsHandler = { _, completed, _, _ in
+            // Only dismiss when user actually completed a share — not on cancel
+            if completed {
+                dismiss()
+            }
+        }
+        // Traverse to the topmost presented view controller to avoid "already presenting" crash
+        guard let windowScene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene,
+              let rootVC = windowScene.windows.first?.rootViewController else { return }
+        var topVC = rootVC
+        while let presented = topVC.presentedViewController {
+            topVC = presented
+        }
+        topVC.present(activityVC, animated: true)
     }
 
     private func shareList() {
@@ -177,9 +203,13 @@ struct ShareListSheet: View {
                         ownerName: userViewModel.nickname
                     )
 
-                    // Also save all existing tasks to CloudKit
+                    // Save all existing tasks to CloudKit and collect their record IDs.
+                    // Storing cloudRecordID on each task ensures future toggles UPDATE the
+                    // existing record rather than creating duplicate records in CloudKit.
+                    var taskRecordIDs: [UUID: String] = [:]
                     for task in list.tasks {
-                        _ = try await CloudKitService.shared.saveTask(task, listRecordID: record.recordID)
+                        let taskRecord = try await CloudKitService.shared.saveTask(task, listRecordID: record.recordID)
+                        taskRecordIDs[task.id] = taskRecord.recordID.recordName
                     }
 
                     // Create invitation record for lookup
@@ -188,10 +218,13 @@ struct ShareListSheet: View {
                         listRecordID: record.recordID
                     )
 
-                    // Update local list with cloud record ID
+                    // Update local list with cloud record ID and task cloudRecordIDs
                     await MainActor.run {
                         var updatedList = list
                         updatedList.cloudRecordID = record.recordID.recordName
+                        for i in updatedList.tasks.indices {
+                            updatedList.tasks[i].cloudRecordID = taskRecordIDs[updatedList.tasks[i].id]
+                        }
                         listsViewModel.updateList(updatedList)
                         inviteCode = code
                         isSharing = false

@@ -12,11 +12,12 @@ class StorageService {
     // MARK: - Lists
 
     func saveLists(_ lists: [TodoList]) {
-        do {
-            let data = try JSONEncoder().encode(lists)
-            UserDefaults.standard.set(data, forKey: listsKey)
-        } catch {
-            print("Failed to save lists: \(error)")
+        // Encode JSON on a background thread — avoids blocking the main thread on every tap/toggle.
+        // UserDefaults.standard.set() is thread-safe per Apple docs.
+        let key = listsKey
+        DispatchQueue.global(qos: .utility).async {
+            guard let data = try? JSONEncoder().encode(lists) else { return }
+            UserDefaults.standard.set(data, forKey: key)
         }
     }
 

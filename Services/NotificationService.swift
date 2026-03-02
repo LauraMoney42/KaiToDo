@@ -82,6 +82,33 @@ class NotificationService: NSObject {
         try await center.add(request)
     }
 
+    /// Fired once when a list's starCount hits its starGoal.
+    /// listName and reward are shown in the notification body.
+    func scheduleGoalReachedNotification(
+        listName: String,
+        rewardText: String?
+    ) async throws {
+        guard isAuthorized else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "⭐ Goal Reached!"
+        if let reward = rewardText, !reward.isEmpty {
+            content.body = "\(listName) hit its star goal! Time to celebrate: \(reward) 🎉"
+        } else {
+            content.body = "\(listName) hit its star goal! Amazing work 🎉"
+        }
+        content.sound = .default
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "goal-reached-\(listName)-\(Date().timeIntervalSince1970)",
+            content: content,
+            trigger: trigger
+        )
+
+        try await UNUserNotificationCenter.current().add(request)
+    }
+
     func scheduleReminderNotification(
         taskName: String,
         listName: String,

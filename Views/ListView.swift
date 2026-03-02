@@ -8,26 +8,18 @@ struct ListView: View {
 
     @State private var newTaskText = ""
     @State private var showingShareSheet = false
+    @State private var showingStarGoalSheet = false
     @State private var isEditingTitle = false
     @State private var editedTitle = ""
     @State private var keyboardVisible = false      // driven by UIKit notifications — instant
-    @State private var isReordering = false         // toggles drag handles for reorder mode
     @State private var seenCompletedTrigger = 0    // snapshot on appear — only fire confetti on NEW completions
     @FocusState private var isInputFocused: Bool
     @FocusState private var isTitleFocused: Bool
 
-    // Confetti params — live-updated by ConfettiSettingsView via @AppStorage
-    @AppStorage("confetti_num") private var confettiNum: Int = 80
-    @AppStorage("confetti_size") private var confettiSize: Double = 11.0
-    @AppStorage("confetti_rainHeight") private var confettiRainHeight: Double = 700.0
-    @AppStorage("confetti_opacity") private var confettiOpacity: Double = 1.0
-    @AppStorage("confetti_fadesOut") private var confettiFadesOut: Bool = true
-    @AppStorage("confetti_openingAngle") private var confettiOpeningAngle: Double = 60.0
-    @AppStorage("confetti_closingAngle") private var confettiClosingAngle: Double = 120.0
-    @AppStorage("confetti_radius") private var confettiRadius: Double = 520.0
-    @AppStorage("confetti_repetitions") private var confettiRepetitions: Int = 1
-    @AppStorage("confetti_repetitionInterval") private var confettiRepetitionInterval: Double = 1.0
-    @AppStorage("confetti_spinSpeed") private var confettiSpinSpeed: Double = 1.0
+    // Confetti params are intentionally NOT stored here — see ConfettiCannonView below.
+    // Previously, 11 @AppStorage properties here caused ListView to re-render the entire
+    // task list whenever any confetti setting changed. They now live in a child view so
+    // settings changes only re-render that isolated overlay.
 
     private var list: TodoList? {
         listsViewModel.getList(by: listID)
@@ -74,12 +66,13 @@ struct ListView: View {
                             }
                             .listStyle(.plain)
                             .scrollDismissesKeyboard(.immediately)
-                            // editMode only active during explicit reorder — keeps swipeActions working normally
-                            .environment(\.editMode, .constant(isReordering ? .active : .inactive))
+                            // Keep editMode inactive — drag-to-reorder works via long-press without visible handles
+                            .environment(\.editMode, .constant(.inactive))
                         }
                     }
 
-                    // Add task input
+                    // Add task input — contentShape + onTapGesture makes the ENTIRE bar tappable,
+                    // not just the exact TextField bounds, so a tap anywhere in the row focuses input.
                     HStack(spacing: 12) {
                         TextField("Add a task...", text: $newTaskText)
                             .textFieldStyle(.plain)
@@ -94,6 +87,11 @@ struct ListView: View {
                         .disabled(newTaskText.isEmpty)
                     }
                     .padding()
+                    .contentShape(Rectangle())
+                    // simultaneousGesture — allows the focus tap to fire WITHOUT blocking the
+                    // "+" button or TextField. Previously .onTapGesture added ~300ms disambiguation
+                    // delay because SwiftUI waited to see if the tap was for this gesture or a child.
+                    .simultaneousGesture(TapGesture().onEnded { isInputFocused = true })
                     .background(Color(.systemBackground))
                     .overlay(
                         Rectangle()
@@ -104,44 +102,39 @@ struct ListView: View {
                 }
                 // Tint interactive elements (buttons, checkmarks) with list accent color
                 .tint(Color(hex: list.color))
-                .navigationBarTitleDisplayMode(.large)
-                .navigationTitle(list.name)
-                .onTapGesture {
-                    if canEditTitle(list) {
-                        startEditingTitle(list: list)
-                    }
-                }
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationTitle("") // title rendered in .principal slot below
                 .toolbar {
-                    // Inline title editor
-                    if isEditingTitle {
-                        ToolbarItem(placement: .principal) {
+                    // Title — always in .principal so long-press gesture is always reachable.
+                    // Long-press (≥0.5s) triggers inline rename for list owners/local lists.
+                    // Switches to a focused TextField; confirm via Return or "Done" button.
+                    ToolbarItem(placement: .principal) {
+                        if isEditingTitle {
                             TextField("List name", text: $editedTitle)
                                 .font(.headline)
                                 .multilineTextAlignment(.center)
                                 .focused($isTitleFocused)
                                 .onSubmit { commitTitleEdit(list: list) }
                                 .submitLabel(.done)
+                        } else {
+                            Text(list.name)
+                                .font(.headline)
+                                .lineLimit(1)
+                                .onLongPressGesture(minimumDuration: 0.5) {
+                                    guard canEditTitle(list) else { return }
+                                    startEditingTitle(list: list)
+                                }
                         }
+                    }
+
+                    if isEditingTitle {
+                        // Confirm rename
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Done") { commitTitleEdit(list: list) }
                                 .fontWeight(.semibold)
                         }
-                    } else if keyboardVisible {
-                        // Notes-style: checkmark appears the moment keyboard shows
-                        ToolbarItem(placement: .topBarTrailing) {
-                            Button {
-                                isInputFocused = false
-                                UIApplication.shared.sendAction(
-                                    #selector(UIResponder.resignFirstResponder),
-                                    to: nil, from: nil, for: nil
-                                )
-                            } label: {
-                                Image(systemName: "checkmark")
-                                    .fontWeight(.semibold)
-                            }
-                        }
                     } else {
-                        // Sync button for shared lists
+                        // Sync button — only for shared lists
                         if list.isShared {
                             ToolbarItem(placement: .topBarTrailing) {
                                 Button { refreshList() } label: {
@@ -155,19 +148,37 @@ struct ListView: View {
                             }
                         }
 
+                        // Keyboard dismiss — kept SEPARATE from the … menu so the menu is
+                        // never swapped out of the toolbar (iOS drops the first tap on a
+                        // Menu that just appeared in a slot).
+                        if keyboardVisible {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    isInputFocused = false
+                                    UIApplication.shared.sendAction(
+                                        #selector(UIResponder.resignFirstResponder),
+                                        to: nil, from: nil, for: nil
+                                    )
+                                } label: {
+                                    Image(systemName: "checkmark")
+                                        .fontWeight(.semibold)
+                                }
+                            }
+                        }
+
+                        // … menu — always present so iOS never re-renders this slot.
+                        // "Rename List" removed — long-press on the title replaces it.
                         ToolbarItem(placement: .topBarTrailing) {
                             Menu {
-                                // Reorder mode toggle — shows/hides drag handles
-                                Button {
-                                    isReordering.toggle()
-                                } label: {
-                                    Label(
-                                        isReordering ? "Done Reordering" : "Reorder Tasks",
-                                        systemImage: isReordering ? "checkmark" : "arrow.up.arrow.down"
-                                    )
-                                }
+                                if canEditTitle(list) {
+                                    Button {
+                                        showingStarGoalSheet = true
+                                    } label: {
+                                        Label("Set Star Goal", systemImage: "star.fill")
+                                    }
 
-                                Divider()
+                                    Divider()
+                                }
 
                                 Button(role: .destructive) {
                                     listsViewModel.resetList(listID)
@@ -205,14 +216,17 @@ struct ListView: View {
                 .sheet(isPresented: $showingShareSheet) {
                     ShareListSheet(listID: listID)
                 }
+                .sheet(isPresented: $showingStarGoalSheet) {
+                    StarGoalSheet(listID: listID)
+                }
             } else {
                 Text("List not found")
                     .foregroundStyle(.secondary)
             }
         }
-        .onTapGesture {
-            isInputFocused = false
-        }
+        // NOTE: Outer tap gesture removed — was competing with inner title-edit tap and List row taps,
+        // causing gesture disambiguation delay (perceived as "unresponsive"). Keyboard dismiss is
+        // handled by: toolbar checkmark (keyboardVisible=true), scrollDismissesKeyboard(.immediately).
         // Track keyboard visibility via UIKit notifications — more reliable than @FocusState for toolbar
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
             guard !isEditingTitle else { return }
@@ -221,24 +235,12 @@ struct ListView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             keyboardVisible = false
         }
-        .confettiCannon(
-            trigger: Binding(
-                get: { listsViewModel.confettiTrigger },
-                set: { _ in }
-            ),
-            num: confettiNum,
-            colors: [.kaiPurple, .kaiRed, .kaiTeal, .kaiYellow, .kaiOrange, .kaiMint, .kaiPink, .kaiBlue],
-            confettiSize: CGFloat(confettiSize),
-            rainHeight: CGFloat(confettiRainHeight),
-            fadesOut: confettiFadesOut,
-            opacity: confettiOpacity,
-            openingAngle: .degrees(confettiOpeningAngle),
-            closingAngle: .degrees(confettiClosingAngle),
-            radius: CGFloat(confettiRadius),
-            repetitions: confettiRepetitions,
-            repetitionInterval: confettiRepetitionInterval,
-            spinSpeedMultiplier: confettiSpinSpeed
-        )
+        // ConfettiCannonLayer owns all @AppStorage params — isolated so confetti
+        // setting changes never re-render the ListView task list.
+        .overlay {
+            ConfettiCannonLayer(trigger: listsViewModel.confettiTrigger)
+                .allowsHitTesting(false)
+        }
         .overlay {
             // Only fire when trigger increments AFTER this view appeared —
             // prevents premade/already-complete lists from firing on open
@@ -246,9 +248,20 @@ struct ListView: View {
                 MultiFireworkOverlay(trigger: listsViewModel.listCompletedTrigger)
             }
         }
+        .overlay {
+            // ⭐ Gold Star celebration — layered over confetti, non-blocking
+            if listsViewModel.listCompletedTrigger > seenCompletedTrigger {
+                GoldStarCelebrationOverlay(trigger: listsViewModel.listCompletedTrigger)
+            }
+        }
         .onAppear {
             // Snapshot current trigger so pre-existing completions don't fire
             seenCompletedTrigger = listsViewModel.listCompletedTrigger
+            // Auto-sync shared lists on open — pulls latest tasks from CloudKit
+            // so participant changes are visible immediately without manual refresh.
+            if let list = list, list.isShared {
+                Task { await listsViewModel.syncSharedLists() }
+            }
         }
     }
 
@@ -309,6 +322,44 @@ struct ListView: View {
     }
 }
 
+// MARK: - Confetti Cannon Layer
+
+/// Isolated confetti view — owns its @AppStorage params so changes don't re-render ListView body.
+private struct ConfettiCannonLayer: View {
+    let trigger: Int
+
+    @AppStorage("confetti_num") private var confettiNum: Int = 80
+    @AppStorage("confetti_size") private var confettiSize: Double = 11.0
+    @AppStorage("confetti_rainHeight") private var confettiRainHeight: Double = 700.0
+    @AppStorage("confetti_opacity") private var confettiOpacity: Double = 1.0
+    @AppStorage("confetti_fadesOut") private var confettiFadesOut: Bool = true
+    @AppStorage("confetti_openingAngle") private var confettiOpeningAngle: Double = 60.0
+    @AppStorage("confetti_closingAngle") private var confettiClosingAngle: Double = 120.0
+    @AppStorage("confetti_radius") private var confettiRadius: Double = 520.0
+    @AppStorage("confetti_repetitions") private var confettiRepetitions: Int = 1
+    @AppStorage("confetti_repetitionInterval") private var confettiRepetitionInterval: Double = 1.0
+    @AppStorage("confetti_spinSpeed") private var confettiSpinSpeed: Double = 1.0
+
+    var body: some View {
+        Color.clear
+            .confettiCannon(
+                trigger: Binding(get: { trigger }, set: { _ in }),
+                num: confettiNum,
+                colors: [.kaiPurple, .kaiRed, .kaiTeal, .kaiYellow, .kaiOrange, .kaiMint, .kaiPink, .kaiBlue],
+                confettiSize: CGFloat(confettiSize),
+                rainHeight: CGFloat(confettiRainHeight),
+                fadesOut: confettiFadesOut,
+                opacity: confettiOpacity,
+                openingAngle: .degrees(confettiOpeningAngle),
+                closingAngle: .degrees(confettiClosingAngle),
+                radius: CGFloat(confettiRadius),
+                repetitions: confettiRepetitions,
+                repetitionInterval: confettiRepetitionInterval,
+                spinSpeedMultiplier: confettiSpinSpeed
+            )
+    }
+}
+
 // MARK: - Multi-Firework Overlay
 
 /// Fires 5 staggered 360° confetti cannons (4 corners + center) when an entire list is completed.
@@ -341,6 +392,94 @@ struct MultiFireworkOverlay: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { t2 += 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { t3 += 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { t5 += 1 }
+        }
+    }
+}
+
+// MARK: - Gold Star Celebration Overlay
+
+/// Large ⭐ reward moment — springs in, glows, fades out in ~2s alongside multi-confetti.
+/// Non-blocking: allowsHitTesting(false) so users can still interact beneath it.
+struct GoldStarCelebrationOverlay: View {
+    let trigger: Int
+
+    @State private var scale: CGFloat = 0.1
+    @State private var opacity: Double = 0
+    @State private var glowRadius: CGFloat = 0
+    @State private var shimmerPhase: CGFloat = 0
+    @State private var rotation: Double = 0
+
+    var body: some View {
+        ZStack {
+            // Soft radial glow behind the star
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            Color(hex: "FFD84D").opacity(0.55),
+                            Color(hex: "FFB800").opacity(0.2),
+                            Color.clear
+                        ],
+                        center: .center,
+                        startRadius: 10,
+                        endRadius: glowRadius
+                    )
+                )
+                .frame(width: glowRadius * 2, height: glowRadius * 2)
+                .opacity(opacity)
+
+            // The star itself — spins during celebration
+            Text("⭐")
+                .font(.system(size: 120))
+                .scaleEffect(scale)
+                .rotationEffect(.degrees(rotation))
+                .opacity(opacity)
+                // Shimmer: subtle brightness pulse
+                .brightness(shimmerPhase * 0.25)
+        }
+        .allowsHitTesting(false)
+        .onAppear {
+            runAnimation()
+        }
+    }
+
+    private func runAnimation() {
+        // Phase 1 — spring pop in + start spin (0–0.5s)
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.55)) {
+            scale = 1.2
+            opacity = 1.0
+            glowRadius = 160
+        }
+        // Spin: += 360 so re-triggers always animate a full turn from current value.
+        // Setting rotation = 360 is a no-op when state is already at 360 (common on
+        // second+ list completion), causing the star to appear frozen.
+        withAnimation(.easeInOut(duration: 1.4)) {
+            rotation += 360
+        }
+        // Phase 2 — settle to natural size (0.45s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                scale = 1.0
+            }
+        }
+        // Phase 3 — shimmer pulse (0.5–1.2s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.easeInOut(duration: 0.35)) {
+                shimmerPhase = 1.0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                withAnimation(.easeInOut(duration: 0.35)) {
+                    shimmerPhase = 0.0
+                }
+            }
+        }
+        // Phase 4 — fade out (1.3–1.8s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            withAnimation(.easeOut(duration: 0.5)) {
+                opacity = 0
+                scale = 1.1
+                glowRadius = 0
+            }
         }
     }
 }

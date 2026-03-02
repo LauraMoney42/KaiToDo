@@ -5,6 +5,9 @@ options:
     iOS: "17.0"
   xcodeVersion: "15.0"
   developmentLanguage: en
+  localizations:
+    - en
+    - es
 
 settings:
   base:

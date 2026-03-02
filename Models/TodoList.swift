@@ -1,4 +1,6 @@
 import Foundation
+import SwiftUI
+import UniformTypeIdentifiers
 
 struct Participant: Identifiable, Codable, Equatable, Hashable {
     let id: String
@@ -27,6 +29,12 @@ struct TodoList: Identifiable, Codable, Equatable, Hashable {
     var participants: [Participant]
     var inviteCode: String?
 
+    // ⭐ Gold Star rewards — persisted via Codable, synced via CloudKit on shared lists
+    var starCount: Int          // earned stars (increments when all tasks completed)
+    var starGoal: Int?          // target star count to earn the reward (nil = no goal set)
+    var rewardText: String?     // reward description, e.g. "🍕 Pizza night!"
+    var rewardGiven: Bool       // true once the parent marks the reward as given
+
     enum ShareType: String, Codable {
         case local
         case owned
@@ -44,7 +52,11 @@ struct TodoList: Identifiable, Codable, Equatable, Hashable {
         ownerID: String? = nil,
         ownerName: String? = nil,
         participants: [Participant] = [],
-        inviteCode: String? = nil
+        inviteCode: String? = nil,
+        starCount: Int = 0,
+        starGoal: Int? = nil,
+        rewardText: String? = nil,
+        rewardGiven: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -57,6 +69,10 @@ struct TodoList: Identifiable, Codable, Equatable, Hashable {
         self.ownerName = ownerName
         self.participants = participants
         self.inviteCode = inviteCode
+        self.starCount = starCount
+        self.starGoal = starGoal
+        self.rewardText = rewardText
+        self.rewardGiven = rewardGiven
     }
 
     var completedTaskCount: Int {
@@ -76,4 +92,17 @@ struct TodoList: Identifiable, Codable, Equatable, Hashable {
         let characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
         return String((0..<6).map { _ in characters.randomElement()! })
     }
+}
+
+// MARK: - Transferable (drag-to-reorder support)
+
+extension TodoList: Transferable {
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(for: TodoList.self, contentType: .kaiToDoList)
+    }
+}
+
+extension UTType {
+    /// Custom UTType for TodoList drag-and-drop within KaiToDo.
+    static let kaiToDoList = UTType(exportedAs: "com.kindcode.kaitodo.list")
 }

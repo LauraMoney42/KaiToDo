@@ -48,6 +48,21 @@ struct OnboardingView: View {
                 gradient: ["4ECDC4", "2196A6"],
                 tapHint: "Tap anywhere to continue"
             ),
+            // ⭐ Gold Stars — placed directly after Adding Tasks so kids see the reward
+            // system immediately after learning how to complete tasks.
+            OnboardingPage(
+                emoji: "⭐",
+                title: "Earn Gold Stars!",
+                subtitle: "Set a goal, earn stars, get your reward.",
+                bullets: [
+                    "Set a Star Goal — choose how many stars to earn toward a reward",
+                    "Add Your Reward — type in what you're working toward",
+                    "Earn Stars — complete tasks to earn ⭐, finish a whole list for a bonus star",
+                    "Track Your Progress — tap the ⭐ counter anytime to see stars vs. your goal"
+                ],
+                gradient: ["FFB800", "FF8C42"],
+                tapHint: "Tap anywhere to continue"
+            ),
             OnboardingPage(
                 emoji: "👨‍👩‍👧",
                 title: "Adding a Buddy",
@@ -59,6 +74,32 @@ struct OnboardingView: View {
                     "Now you're both on the same list! 🥳"
                 ],
                 gradient: ["F38181", "C0392B"],
+                tapHint: "Tap anywhere to continue"
+            ),
+            OnboardingPage(
+                emoji: "💬",
+                title: "Share via Messages",
+                subtitle: "Inviting someone is easy as texting.",
+                bullets: [
+                    "Tap the share icon on any list",
+                    "Choose Messages to send the invite code",
+                    "Your buddy taps the link or enters the code in Settings",
+                    "Done — they're on the list instantly!"
+                ],
+                gradient: ["34C759", "248A3D"],
+                tapHint: "Tap anywhere to continue"
+            ),
+            OnboardingPage(
+                emoji: "⚡️",
+                title: "Always in Sync",
+                subtitle: "Everyone sees changes in real time.",
+                bullets: [
+                    "Check off a task — your buddy sees it immediately",
+                    "No manual refresh needed",
+                    "Works in the background, even when the app is closed",
+                    "Shared lists are always up to date 🔄"
+                ],
+                gradient: ["5856D6", "3634A3"],
                 tapHint: "Tap anywhere to continue"
             ),
             OnboardingPage(
@@ -159,8 +200,8 @@ struct OnboardingPageView: View {
                     .animation(.spring(response: 0.55, dampingFraction: 0.6).delay(0.1), value: appeared)
                     .padding(.bottom, 28)
 
-                // Title
-                Text(page.title)
+                // Title — LocalizedStringKey lookup so strings are pulled from Localizable.strings
+                Text(LocalizedStringKey(page.title))
                     .font(.system(size: 30, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
@@ -170,7 +211,7 @@ struct OnboardingPageView: View {
                     .padding(.horizontal, 32)
 
                 // Subtitle
-                Text(page.subtitle)
+                Text(LocalizedStringKey(page.subtitle))
                     .font(.system(size: 18, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.85))
                     .multilineTextAlignment(.center)
@@ -189,7 +230,7 @@ struct OnboardingPageView: View {
                                 .font(.system(size: 18))
                                 .padding(.top, 1)
 
-                            Text(bullet)
+                            Text(LocalizedStringKey(bullet))
                                 .font(.system(size: 17, weight: .medium, design: .rounded))
                                 .foregroundStyle(.white)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -205,7 +246,7 @@ struct OnboardingPageView: View {
                 Spacer()
 
                 // Tap hint
-                Text(page.tapHint)
+                Text(LocalizedStringKey(page.tapHint))
                     .font(.system(size: 15, weight: .medium, design: .rounded))
                     .foregroundStyle(.white.opacity(0.65))
                     .opacity(appeared ? 1.0 : 0)
