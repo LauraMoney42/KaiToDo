@@ -1,4 +1,64 @@
 import SwiftUI
+import CloudKit
+import UserNotifications
+
+// MARK: - App Delegate (CloudKit silent push handling)
+
+/// Receives CloudKit silent push notifications and forwards them to ListsViewModel via
+/// NotificationCenter. This is the only reliable way to handle background CloudKit
+/// subscription callbacks in a SwiftUI lifecycle app.
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        // ⏱ LAUNCH TIMING — remove after kai-launch-007 diagnosis
+        print("⏱ T+0.000 AppDelegate.didFinishLaunching START \(Date())")
+        // Register for remote notifications — required for CloudKit subscriptions to deliver pushes
+        application.registerForRemoteNotifications()
+        print("⏱ T+? registerForRemoteNotifications() DONE \(Date())")
+        // Set up CloudKit subscriptions (idempotent — CloudKit ignores duplicate subscription IDs)
+        Task {
+            print("⏱ T+? CloudKitService.shared access START \(Date())")
+            try? await CloudKitService.shared.setupSubscriptions()
+            print("⏱ T+? CloudKitService.setupSubscriptions DONE \(Date())")
+        }
+        print("⏱ T+? AppDelegate.didFinishLaunching RETURN \(Date())")
+        return true
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("⚠️ Failed to register for remote notifications: \(error)")
+    }
+
+    /// CloudKit silent push — content-available:1, no alert/sound/badge.
+    /// Parse as CKNotification; if valid, post local notification so ListsViewModel syncs.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard let dict = userInfo as? [String: NSObject],
+              let ckNotification = CKNotification(fromRemoteNotificationDictionary: dict),
+              ckNotification.notificationType == .query else {
+            completionHandler(.noData)
+            return
+        }
+        // Broadcast to any listening ListsViewModel instances
+        NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
+        completionHandler(.newData)
+    }
+}
+
+extension Notification.Name {
+    /// Posted when a CloudKit subscription push arrives — triggers syncSharedLists().
+    static let cloudKitDataChanged = Notification.Name("cloudKitDataChanged")
+    /// Posted by ListsViewModel when a list completes and a ⭐ is earned.
+    /// userInfo: ["listID": UUID]
+    static let starEarned = Notification.Name("starEarned")
+}
+
+// MARK: - Invite Code Item
 
 /// Wrapper so a String invite code can drive sheet(item:)
 struct InviteCodeItem: Identifiable {
@@ -8,6 +68,7 @@ struct InviteCodeItem: Identifiable {
 
 @main
 struct KaiToDoApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var listsViewModel = ListsViewModel()
     @State private var userViewModel = UserViewModel()
 
@@ -20,18 +81,24 @@ struct KaiToDoApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                ContentView()
-                    .environment(listsViewModel)
-                    .environment(userViewModel)
-                    .onOpenURL { url in
-                        handleDeepLink(url)
-                    }
-                    .sheet(item: $pendingInvite) { invite in
-                        // Auto-present join sheet with prefilled code
-                        JoinListSheet(prefillCode: invite.code)
-                            .environment(listsViewModel)
-                            .environment(userViewModel)
-                    }
+                // ContentView is NOT mounted until splash finishes.
+                // This ensures SwiftUI's first rendered frame is KindCodeSplashView —
+                // ViewModel I/O and CloudKit init cannot block the splash render.
+                if !showingSplash {
+                    ContentView()
+                        .environment(listsViewModel)
+                        .environment(userViewModel)
+                        .onOpenURL { url in
+                            handleDeepLink(url)
+                        }
+                        .sheet(item: $pendingInvite) { invite in
+                            // Auto-present join sheet with prefilled code
+                            JoinListSheet(prefillCode: invite.code)
+                                .environment(listsViewModel)
+                                .environment(userViewModel)
+                        }
+                        .transition(.opacity)
+                }
 
                 if showingSplash {
                     KindCodeSplashView(isShowing: $showingSplash)
