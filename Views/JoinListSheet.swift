@@ -117,7 +117,8 @@ struct JoinListSheet: View {
             do {
                 // Find the shared list by invite code
                 if let (record, tasks) = try await CloudKitService.shared.fetchSharedList(byInviteCode: inviteCode) {
-                    // Create local copy of the shared list
+                    // Create local copy of the shared list — include star/reward fields
+                    // so participant sees reward progress immediately (kai-sync-004 fix).
                     let sharedList = TodoList(
                         name: record["name"] as? String ?? "Shared List",
                         color: record["color"] as? String ?? "7161EF",
@@ -127,7 +128,11 @@ struct JoinListSheet: View {
                         shareType: .participant,
                         ownerID: record["ownerID"] as? String,
                         ownerName: record["ownerName"] as? String,
-                        inviteCode: inviteCode
+                        inviteCode: inviteCode,
+                        starCount: (record["starCount"] as? Int64).map(Int.init) ?? 0,
+                        starGoal: (record["starGoal"] as? Int64).map(Int.init),
+                        rewardText: record["rewardText"] as? String,
+                        rewardGiven: (record["rewardGiven"] as? Int64 ?? 0) == 1
                     )
 
                     // Try to register as participant — non-fatal if permission denied

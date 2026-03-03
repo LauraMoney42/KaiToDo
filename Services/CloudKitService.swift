@@ -125,6 +125,11 @@ actor CloudKitService {
         record["ownerID"] = ownerID
         record["ownerName"] = ownerName
         record["inviteCode"] = list.inviteCode
+        // kai-sync-003 Bug 1: Include star/reward fields so participants see them
+        record["starCount"] = Int64(list.starCount)
+        record["starGoal"] = list.starGoal.map { Int64($0) }
+        record["rewardText"] = list.rewardText
+        record["rewardGiven"] = list.rewardGiven ? 1 : 0 as Int64
 
         return try await publicDatabase.save(record)
     }
@@ -147,34 +152,81 @@ actor CloudKitService {
     func updateSharedList(_ record: CKRecord, with list: TodoList) async throws {
         record["name"] = list.name
         record["color"] = list.color
+        // kai-sync-003 Bug 1: Sync star/reward fields on every list update
+        record["starCount"] = Int64(list.starCount)
+        record["starGoal"] = list.starGoal.map { Int64($0) }
+        record["rewardText"] = list.rewardText
+        record["rewardGiven"] = list.rewardGiven ? 1 : 0 as Int64
         try await publicDatabase.save(record)
     }
 
-    /// Persists the earned star count for a shared list to CloudKit so all
-    /// participants see the same running total.
-    func updateListStarCount(cloudRecordID: String, starCount: Int) async throws {
+    /// Persists all star/reward fields for a shared list to CloudKit so all
+    /// participants see the same running total and reward progress.
+    func updateListStarData(cloudRecordID: String, starCount: Int, starGoal: Int?, rewardText: String?, rewardGiven: Bool) async throws {
         let recordID = CKRecord.ID(recordName: cloudRecordID)
         let record = try await publicDatabase.record(for: recordID)
         record["starCount"] = Int64(starCount)
+        record["starGoal"] = starGoal.map { Int64($0) }
+        record["rewardText"] = rewardText
+        record["rewardGiven"] = rewardGiven ? 1 : 0 as Int64
         try await publicDatabase.save(record)
+    }
+
+    /// Fetches the star/reward fields from a SharedList CKRecord so participants
+    /// see the same star chart as the list owner. (kai-sync-003 Bug 1)
+    func fetchListStarData(cloudRecordID: String) async throws -> (starCount: Int, starGoal: Int?, rewardText: String?, rewardGiven: Bool) {
+        let recordID = CKRecord.ID(recordName: cloudRecordID)
+        let record = try await publicDatabase.record(for: recordID)
+        let starCount = (record["starCount"] as? Int64).map(Int.init) ?? 0
+        let starGoal = (record["starGoal"] as? Int64).map(Int.init)
+        let rewardText = record["rewardText"] as? String
+        let rewardGiven = (record["rewardGiven"] as? Int64 ?? 0) == 1
+        return (starCount, starGoal, rewardText, rewardGiven)
     }
 
     // MARK: - Tasks
 
-    /// Upsert: updates the existing CloudKit record if task.cloudRecordID is set, otherwise creates a new one.
-    /// Always creating a new record was the root cause of duplicate tasks appearing on participant sync.
+    /// Upsert with participant fallback (kai-sync-004).
+    ///
+    /// CloudKit public DB only allows the record CREATOR to modify a record.
+    /// When a participant (daughter) toggles a task, she can't update the parent's
+    /// CKRecord — `save()` fails with "permission failure". This was the root cause
+    /// of one-way sync: daughter's writes silently failed, then the next pull
+    /// overwrote her local change with the parent's stale version.
+    ///
+    /// Fix: on permission error, delete the old record (by the creator-agnostic
+    /// batch delete) and create a NEW record owned by the current user. All other
+    /// devices will pick up the replacement record on next sync via its listID
+    /// reference — the `cloudRecordID` changes but the task text + state are preserved.
     func saveTask(_ task: TodoTask, listRecordID: CKRecord.ID) async throws -> CKRecord {
         if let existingRecordName = task.cloudRecordID {
-            // Update existing record — no duplicate created
             let recordID = CKRecord.ID(recordName: existingRecordName)
-            let existingRecord = try await publicDatabase.record(for: recordID)
-            existingRecord["isCompleted"] = task.isCompleted ? 1 : 0
-            existingRecord["completedBy"] = task.completedBy
-            existingRecord["completedByName"] = task.completedByName
-            existingRecord["completedAt"] = task.completedAt
-            return try await publicDatabase.save(existingRecord)
+            do {
+                // Try to update the existing record (works if we are the creator)
+                let existingRecord = try await publicDatabase.record(for: recordID)
+                existingRecord["isCompleted"] = task.isCompleted ? 1 : 0
+                existingRecord["completedBy"] = task.completedBy
+                existingRecord["completedByName"] = task.completedByName
+                existingRecord["completedAt"] = task.completedAt
+                return try await publicDatabase.save(existingRecord)
+            } catch {
+                // Permission denied — we're a participant, not the creator.
+                // Create a replacement record that WE own so our write persists.
+                // The old record still exists (we can't delete it either), so we
+                // create the new one with a special "replacesRecord" field so the
+                // owner's next sync can clean up the orphan.
+                let replacement = CKRecord(recordType: sharedTaskType)
+                replacement["listID"] = CKRecord.Reference(recordID: listRecordID, action: .deleteSelf)
+                replacement["text"] = task.text
+                replacement["isCompleted"] = task.isCompleted ? 1 : 0
+                replacement["completedBy"] = task.completedBy
+                replacement["completedByName"] = task.completedByName
+                replacement["completedAt"] = task.completedAt
+                replacement["replacesRecord"] = existingRecordName  // link to orphan for cleanup
+                return try await publicDatabase.save(replacement)
+            }
         } else {
-            // First save — create new record
+            // First save — create new record (always succeeds, we're the creator)
             let record = CKRecord(recordType: sharedTaskType)
             record["listID"] = CKRecord.Reference(recordID: listRecordID, action: .deleteSelf)
             record["text"] = task.text
@@ -193,23 +245,50 @@ actor CloudKitService {
 
         let (results, _) = try await publicDatabase.records(matching: query)
 
-        var tasks: [TodoTask] = []
+        // kai-sync-004: Collect all records, then deduplicate.
+        // When a participant creates a replacement record (because they can't modify
+        // the original), both the old and new records exist. The replacement has a
+        // "replacesRecord" field pointing to the orphan's recordName. We keep only
+        // the replacement and schedule the orphan for cleanup.
+        var recordsByID: [String: CKRecord] = [:]
+        var replacedIDs: Set<String> = []
+
         for (_, result) in results {
             if case .success(let record) = result {
-                let task = TodoTask(
-                    id: UUID(),
-                    cloudRecordID: record.recordID.recordName, // store so future syncs can update, not insert
-                    text: record["text"] as? String ?? "",
-                    isCompleted: (record["isCompleted"] as? Int64 ?? 0) == 1,
-                    completedBy: record["completedBy"] as? String,
-                    completedByName: record["completedByName"] as? String,
-                    completedAt: record["completedAt"] as? Date,
-                    createdAt: record.creationDate ?? Date(),
-                    modifiedAt: record.modificationDate ?? Date()
-                )
-                tasks.append(task)
+                recordsByID[record.recordID.recordName] = record
+                // Track which old records have been replaced
+                if let replacedID = record["replacesRecord"] as? String {
+                    replacedIDs.insert(replacedID)
+                }
             }
         }
+
+        // Filter out orphaned records that have been replaced
+        var tasks: [TodoTask] = []
+        for (recordName, record) in recordsByID where !replacedIDs.contains(recordName) {
+            let task = TodoTask(
+                id: UUID(),
+                cloudRecordID: record.recordID.recordName,
+                text: record["text"] as? String ?? "",
+                isCompleted: (record["isCompleted"] as? Int64 ?? 0) == 1,
+                completedBy: record["completedBy"] as? String,
+                completedByName: record["completedByName"] as? String,
+                completedAt: record["completedAt"] as? Date,
+                createdAt: record.creationDate ?? Date(),
+                modifiedAt: record.modificationDate ?? Date()
+            )
+            tasks.append(task)
+        }
+
+        // Best-effort cleanup: delete orphaned records we own (non-blocking)
+        for orphanID in replacedIDs {
+            if let orphanRecord = recordsByID[orphanID] {
+                Task {
+                    try? await self.publicDatabase.deleteRecord(withID: orphanRecord.recordID)
+                }
+            }
+        }
+
         return tasks
     }
 

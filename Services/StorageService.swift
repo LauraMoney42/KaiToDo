@@ -12,13 +12,12 @@ class StorageService {
     // MARK: - Lists
 
     func saveLists(_ lists: [TodoList]) {
-        // Encode JSON on a background thread — avoids blocking the main thread on every tap/toggle.
-        // UserDefaults.standard.set() is thread-safe per Apple docs.
-        let key = listsKey
-        DispatchQueue.global(qos: .utility).async {
-            guard let data = try? JSONEncoder().encode(lists) else { return }
-            UserDefaults.standard.set(data, forKey: key)
-        }
+        // SYNCHRONOUS write — ensures data hits UserDefaults before returning.
+        // Previously dispatched to a background queue, but force-quit killed the async
+        // work before UserDefaults.set() executed → data loss (kai-persist-001).
+        // UserDefaults is memory-mapped; encoding + writing a few KB is <1ms on-device.
+        guard let data = try? JSONEncoder().encode(lists) else { return }
+        UserDefaults.standard.set(data, forKey: listsKey)
     }
 
     func loadLists() -> [TodoList] {

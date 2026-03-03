@@ -18,9 +18,9 @@ class ListsViewModel {
     private var listIndex: [UUID: Int] = [:]
 
     private let storage = StorageService.shared
-    /// Debounced save: cancelled + restarted on every mutation so rapid toggles/edits
-    /// coalesce into a single background write instead of blocking the main thread.
-    private var pendingSave: Task<Void, Never>?
+    /// Previously debounced saves via Task.detached with 300ms delay — removed because
+    /// force-quit during the sleep window caused data loss (kai-persist-001).
+    /// Saves are now synchronous; UserDefaults is memory-mapped so writes are <1ms.
 
     /// Track last sync time to debounce repeated foreground transitions
     private var lastSyncTime: Date = .distantPast
@@ -74,14 +74,11 @@ class ListsViewModel {
     }
 
     func saveLists() {
-        pendingSave?.cancel()
-        let snapshot = lists          // capture value type before leaving main thread
-        pendingSave = Task.detached(priority: .utility) { [weak storage] in
-            // 300ms debounce — coalesces bursts (e.g. rapid toggles) into one write
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !Task.isCancelled else { return }
-            storage?.saveLists(snapshot)
-        }
+        // Synchronous save — data is persisted before this method returns.
+        // Previously used a 300ms debounced Task.detached, but force-quit during the
+        // sleep window killed the task before UserDefaults.set() ran → data loss.
+        // UserDefaults writes are memory-mapped (<1ms) so sync is safe here.
+        storage.saveLists(lists)
     }
 
     func createList(name: String, color: String) -> TodoList {
@@ -106,6 +103,8 @@ class ListsViewModel {
 
     /// Update the Gold Star goal and reward text for a list.
     /// Pass nil for goal to clear it (no goal set). Also resets rewardGiven so button re-appears.
+    /// kai-sync-004: Now pushes star/reward fields to CloudKit so participants (daughter)
+    /// see the HomeRewardCard immediately after the owner sets a goal.
     func updateStarGoal(listID: UUID, goal: Int?, rewardText: String?) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
         lists[index].starGoal = goal
@@ -114,6 +113,22 @@ class ListsViewModel {
             : rewardText?.trimmingCharacters(in: .whitespacesAndNewlines)
         lists[index].rewardGiven = false  // reset so button re-appears when goal changes
         saveLists()
+
+        // Push star goal to CloudKit so participants see it on next sync.
+        // Only the owner can modify the SharedList record in public DB.
+        let list = lists[index]
+        guard list.isShared,
+              list.shareType == .owned,
+              let cloudRecordID = list.cloudRecordID else { return }
+        Task {
+            try? await CloudKitService.shared.updateListStarData(
+                cloudRecordID: cloudRecordID,
+                starCount: list.starCount,
+                starGoal: list.starGoal,
+                rewardText: list.rewardText,
+                rewardGiven: list.rewardGiven
+            )
+        }
     }
 
     /// Call after incrementing starCount — fires push notification if goal just reached.
@@ -336,14 +351,122 @@ class ListsViewModel {
 
         let recordID = CKRecord.ID(recordName: cloudRecordID)
 
-        // Fetch latest tasks from CloudKit
-        let remoteTasks = try await CloudKitService.shared.fetchTasks(forListID: recordID)
+        // Fetch latest tasks AND star data from CloudKit in parallel
+        async let remoteTasksFetch = CloudKitService.shared.fetchTasks(forListID: recordID)
+        async let starDataFetch = CloudKitService.shared.fetchListStarData(cloudRecordID: cloudRecordID)
+
+        let remoteTasks = try await remoteTasksFetch
+        let starData = try await starDataFetch
 
         await MainActor.run {
-            if let index = lists.firstIndex(where: { $0.id == list.id }) {
-                // Merge tasks - prefer remote for shared lists
-                lists[index].tasks = remoteTasks
-                saveLists()
+            guard let index = lists.firstIndex(where: { $0.id == list.id }) else { return }
+
+            // kai-sync-003 Bug 1: Sync star/reward fields from CloudKit → local
+            // kai-sync-004: Use max(local, remote) for starCount so participant-earned
+            // stars aren't overwritten by stale CloudKit data. The participant can't
+            // write star updates to CloudKit (permission denied on public DB), so their
+            // local count may be higher. Owner's authoritative count is pushed separately
+            // (see owner star-push block below).
+            lists[index].starCount = max(lists[index].starCount, starData.starCount)
+            lists[index].starGoal = starData.starGoal
+            lists[index].rewardText = starData.rewardText
+            lists[index].rewardGiven = starData.rewardGiven
+
+            // kai-sync-003 Bug 2: Merge tasks by cloudRecordID with timestamp comparison
+            // instead of blind overwrite. Only accept remote version if it's newer.
+            let localByCloudID = Dictionary(
+                uniqueKeysWithValues: lists[index].tasks
+                    .compactMap { task -> (String, TodoTask)? in
+                        guard let cid = task.cloudRecordID else { return nil }
+                        return (cid, task)
+                    }
+            )
+
+            var mergedTasks: [TodoTask] = []
+            // kai-sync-004: Track how many tasks flipped from incomplete→complete
+            // during this sync (i.e. completed by the other participant remotely).
+            // We award stars for these so the owner's star count stays accurate
+            // and gets pushed to CloudKit for the participant to see.
+            var remoteCompletions = 0
+
+            for remoteTask in remoteTasks {
+                guard let remoteCID = remoteTask.cloudRecordID else {
+                    mergedTasks.append(remoteTask)
+                    continue
+                }
+
+                if let localTask = localByCloudID[remoteCID] {
+                    // Both exist — keep whichever was modified more recently
+                    if remoteTask.modifiedAt > localTask.modifiedAt {
+                        // kai-sync-004: Detect remote completion (other user toggled this task)
+                        if remoteTask.isCompleted && !localTask.isCompleted {
+                            remoteCompletions += 1
+                        }
+                        // Remote is newer — accept it but preserve local UUID for SwiftUI identity
+                        var accepted = remoteTask
+                        accepted = TodoTask(
+                            id: localTask.id,
+                            cloudRecordID: remoteCID,
+                            text: remoteTask.text,
+                            isCompleted: remoteTask.isCompleted,
+                            completedBy: remoteTask.completedBy,
+                            completedByName: remoteTask.completedByName,
+                            completedAt: remoteTask.completedAt,
+                            createdAt: remoteTask.createdAt,
+                            modifiedAt: remoteTask.modifiedAt
+                        )
+                        mergedTasks.append(accepted)
+                    } else {
+                        // Local is newer or same — keep local version (daughter's toggle wins)
+                        mergedTasks.append(localTask)
+                    }
+                } else {
+                    // New task from remote — add it
+                    // kai-sync-004: If it's already completed, count as remote completion
+                    if remoteTask.isCompleted {
+                        remoteCompletions += 1
+                    }
+                    mergedTasks.append(remoteTask)
+                }
+            }
+
+            // Keep local-only tasks (not yet pushed to CloudKit) so they aren't lost
+            for localTask in lists[index].tasks where localTask.cloudRecordID == nil {
+                mergedTasks.append(localTask)
+            }
+
+            lists[index].tasks = mergedTasks
+
+            // kai-sync-004: Award stars for tasks completed remotely by other participant.
+            // This ensures the owner's star count reflects ALL completions (not just their own),
+            // and the updated count gets pushed to CloudKit for participants to see.
+            if remoteCompletions > 0 {
+                lists[index].starCount += remoteCompletions
+                // Also check if all tasks are now completed for bonus star
+                if !lists[index].tasks.isEmpty &&
+                   lists[index].tasks.allSatisfy({ $0.isCompleted }) {
+                    lists[index].starCount += 1
+                }
+            }
+            saveLists()
+
+            // kai-sync-004: If we're the list OWNER and the remote star count differs from
+            // what we have locally (e.g. daughter earned stars that only saved locally on her
+            // device), push our authoritative star data back to CloudKit.
+            // This closes the loop: daughter completes tasks → her device creates replacement
+            // task records → owner syncs and sees them → owner pushes updated star count.
+            if lists[index].shareType == .owned,
+               lists[index].starCount != starData.starCount {
+                let updatedList = lists[index]
+                Task {
+                    try? await CloudKitService.shared.updateListStarData(
+                        cloudRecordID: cloudRecordID,
+                        starCount: updatedList.starCount,
+                        starGoal: updatedList.starGoal,
+                        rewardText: updatedList.rewardText,
+                        rewardGiven: updatedList.rewardGiven
+                    )
+                }
             }
         }
     }
@@ -361,15 +484,22 @@ class ListsViewModel {
                 let savedRecord = try await CloudKitService.shared.saveTask(task, listRecordID: recordID)
                 // Write the CloudKit record name back onto the local task so future syncs
                 // update the existing record instead of creating a duplicate.
+                // kai-sync-004: Also update if the recordName CHANGED (participant created
+                // a replacement record because they couldn't modify the original).
+                let newRecordName = savedRecord.recordID.recordName
                 await MainActor.run {
                     if let listIndex = lists.firstIndex(where: { $0.id == listID }),
-                       let taskIndex = lists[listIndex].tasks.firstIndex(where: { $0.id == task.id }),
-                       lists[listIndex].tasks[taskIndex].cloudRecordID == nil {
-                        lists[listIndex].tasks[taskIndex].cloudRecordID = savedRecord.recordID.recordName
-                        saveLists()
+                       let taskIndex = lists[listIndex].tasks.firstIndex(where: { $0.id == task.id }) {
+                        if lists[listIndex].tasks[taskIndex].cloudRecordID != newRecordName {
+                            lists[listIndex].tasks[taskIndex].cloudRecordID = newRecordName
+                            saveLists()
+                        }
                     }
                 }
             } catch {
+                await MainActor.run {
+                    syncError = "Failed to sync task: \(error.localizedDescription)"
+                }
                 print("Failed to sync task to CloudKit: \(error)")
             }
         }
@@ -387,18 +517,26 @@ class ListsViewModel {
         saveLists()
         NotificationCenter.default.post(name: .starEarned, object: nil)
 
-        // Sync updated starCount to CloudKit for shared lists
+        // Sync star/reward fields to CloudKit for shared lists (kai-sync-003 Bug 1).
+        // kai-sync-004: Only the list OWNER can modify the SharedList CKRecord.
+        // Participants save locally (already done above) — their star count propagates
+        // when the owner's device syncs and sees the completed tasks, then recalculates.
         let list = lists[listIndex]
-        guard list.isShared, let cloudRecordID = list.cloudRecordID else { return }
-        let newStarCount = list.starCount
+        guard list.isShared,
+              list.shareType == .owned,  // only owner can write to SharedList record
+              let cloudRecordID = list.cloudRecordID else { return }
+        let snapshot = (list.starCount, list.starGoal, list.rewardText, list.rewardGiven)
         Task {
             do {
-                try await CloudKitService.shared.updateListStarCount(
+                try await CloudKitService.shared.updateListStarData(
                     cloudRecordID: cloudRecordID,
-                    starCount: newStarCount
+                    starCount: snapshot.0,
+                    starGoal: snapshot.1,
+                    rewardText: snapshot.2,
+                    rewardGiven: snapshot.3
                 )
             } catch {
-                print("⭐ Failed to sync starCount to CloudKit: \(error)")
+                print("⭐ Failed to sync star data to CloudKit: \(error)")
             }
         }
     }

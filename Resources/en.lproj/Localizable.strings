@@ -165,6 +165,9 @@
 "Earn %lld ⭐ completing the list once to unlock the reward." = "Earn %lld ⭐ completing the list once to unlock the reward.";
 "Earn %lld ⭐ by completing the list %lld times to unlock the reward." = "Earn %lld ⭐ by completing the list %lld times to unlock the reward.";
 
+// MARK: - Home Reward Card (Option A)
+"Goal reached! 🎉" = "Goal reached! 🎉";
+
 // MARK: - Confetti Settings
 "Test Confetti" = "Test Confetti";
 "Reset to Defaults" = "Reset to Defaults";

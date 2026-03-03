@@ -7,6 +7,7 @@ struct HomeView: View {
     @State private var showingNewListSheet = false
     @State private var showingSettings = false
     @State private var showingStarBreakdown = false
+    @State private var starGoalListID: UUID?   // which list's StarGoalSheet to open
     @State private var draggingList: TodoList?
 
     // ⭐ Gold Star counter
@@ -29,52 +30,66 @@ struct HomeView: View {
                     if listsViewModel.lists.isEmpty {
                         emptyState
                     } else {
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(listsViewModel.lists) { list in
-                                // NavigationLink wraps ListCard directly — tap reliably opens the list.
-                                // .buttonStyle(.plain) suppresses NavigationLink's default blue highlight.
-                                // .draggable uses long-press so it doesn't conflict with a normal tap.
-                                NavigationLink(value: list) {
-                                    let isDragged = draggingList?.id == list.id
-                                    ListCard(list: list)
-                                        .opacity(isDragged ? 0.5 : 1.0)
-                                        .scaleEffect(isDragged ? 0.95 : 1.0)
-                                        // Only animate the card actually being dragged — previously ALL cards
-                                        // evaluated this animation on every draggingList change, causing
-                                        // unnecessary layout passes and frame drops during scroll.
-                                        .animation(isDragged ? .easeInOut(duration: 0.2) : nil, value: draggingList?.id)
-                                }
-                                .buttonStyle(.plain)
-                                // Drag source — long-press lifts the card
-                                .draggable(list) {
-                                    ListCard(list: list)
-                                        .frame(width: 160)
-                                        .opacity(0.85)
-                                        .onAppear { draggingList = list }
-                                }
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        listsViewModel.deleteList(list)
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
+                        VStack(spacing: 16) {
+                            LazyVGrid(columns: columns, spacing: 16) {
+                                ForEach(listsViewModel.lists) { list in
+                                    NavigationLink(value: list) {
+                                        let isDragged = draggingList?.id == list.id
+                                        ListCard(list: list)
+                                            .opacity(isDragged ? 0.5 : 1.0)
+                                            .scaleEffect(isDragged ? 0.95 : 1.0)
+                                            .animation(isDragged ? .easeInOut(duration: 0.2) : nil, value: draggingList?.id)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .draggable(list) {
+                                        ListCard(list: list)
+                                            .frame(width: 160)
+                                            .opacity(0.85)
+                                            .onAppear { draggingList = list }
+                                    }
+                                    .contextMenu {
+                                        Button(role: .destructive) {
+                                            listsViewModel.deleteList(list)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                    .dropDestination(for: TodoList.self) { items, _ in
+                                        guard let dropped = items.first else { return false }
+                                        listsViewModel.reorderList(moving: dropped, before: list)
+                                        draggingList = nil
+                                        return true
                                     }
                                 }
-                                // Drop target — reorder when another card is dropped here
-                                .dropDestination(for: TodoList.self) { items, _ in
-                                    guard let dropped = items.first else { return false }
-                                    listsViewModel.reorderList(moving: dropped, before: list)
-                                    draggingList = nil
-                                    return true
+                            }
+                            .padding()
+
+                            // MARK: — Reward Progress Cards (Option A)
+                            // Shows a card for each list with an active star goal.
+                            // Kids see exactly how close they are to their reward.
+                            ForEach(listsViewModel.lists.filter {
+                                $0.starGoal != nil && !$0.rewardGiven
+                            }) { list in
+                                if let goal = list.starGoal {
+                                    HomeRewardCard(list: list, goal: goal)
+                                        .padding(.horizontal)
+                                        .onTapGesture {
+                                            starGoalListID = list.id
+                                        }
                                 }
                             }
                         }
-                        .padding()
-                        .padding(.bottom, 100) // room for floating button
+                        .padding(.bottom, 100)
                     }
                 }
                 // Custom nav header via safeAreaInset — pure SwiftUI, zero UIKit involvement.
                 // This completely replaces .toolbar{} which routes through UIBarButtonItem/UIKit
                 // and renders circular backgrounds on iOS 17+ regardless of appearance overrides.
+                // kai-sync-002: Pull-to-refresh on HomeView — syncs all shared lists
+                // with CloudKit. Complements ListView's per-list refreshable.
+                .refreshable {
+                    await listsViewModel.syncSharedLists()
+                }
                 .safeAreaInset(edge: .top, spacing: 0) {
                     customNavHeader
                 }
@@ -128,6 +143,14 @@ struct HomeView: View {
             .sheet(isPresented: $showingStarBreakdown) {
                 StarBreakdownSheet()
             }
+            .sheet(isPresented: Binding(
+                get: { starGoalListID != nil },
+                set: { if !$0 { starGoalListID = nil } }
+            )) {
+                if let listID = starGoalListID {
+                    StarGoalSheet(listID: listID)
+                }
+            }
         }
     }
 
@@ -152,10 +175,22 @@ struct HomeView: View {
 
             Spacer()
 
-            // App title — center
-            Text("Kai To Do")
-                .font(.headline)
-                .foregroundStyle(.primary)
+            // App title — center, with sync indicator
+            VStack(spacing: 2) {
+                Text("Kai To Do")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                // kai-sync-002: Show subtle sync status below title during pull-to-refresh
+                if listsViewModel.isSyncing {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .controlSize(.mini)
+                        Text("Syncing…")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
 
             Spacer()
 
@@ -501,6 +536,113 @@ struct NewListSheet: View {
                 isNameFocused = true
             }
         }
+    }
+}
+
+// MARK: - Home Reward Card (Option A)
+
+/// Prominent reward progress card shown on HomeView below the list grid.
+/// Format: `🌟 3/4 stars → PIZZA PARTY! 🍕`
+/// Tappable → opens StarGoalSheet to edit the goal/reward.
+struct HomeRewardCard: View {
+    let list: TodoList
+    let goal: Int
+
+    private var progress: Double {
+        min(Double(list.starCount) / Double(goal), 1.0)
+    }
+
+    private var isComplete: Bool {
+        list.starCount >= goal
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            // Header: star count → reward name
+            HStack(spacing: 6) {
+                // List color dot
+                Circle()
+                    .fill(Color(hex: list.color))
+                    .frame(width: 10, height: 10)
+
+                Text(list.name)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                // "Tap to edit" hint
+                Image(systemName: "pencil.circle")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+            }
+
+            // Main progress line: 🌟 3/4 stars → PIZZA PARTY! 🍕
+            HStack(spacing: 6) {
+                Text("🌟")
+                    .font(.system(size: 22))
+
+                Text(String(format: NSLocalizedString("%lld / %lld ⭐", comment: "Star progress: earned / goal"), list.starCount, goal))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(isComplete ? Color(hex: "34d399") : Color(hex: "FFB800"))
+
+                if let reward = list.rewardText, !reward.isEmpty {
+                    Text("→")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
+
+                    Text(reward)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(isComplete ? Color(hex: "34d399") : .primary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+            }
+
+            // Progress bar — same style as StarProgressCard but wider
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color(hex: "FFB800").opacity(0.18))
+                        .frame(height: 12)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: isComplete
+                                    ? [Color(hex: "34d399"), Color(hex: "a7f3d0")]
+                                    : [Color(hex: "FFB800"), Color(hex: "FFD84D")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geo.size.width * progress, height: 12)
+                        .animation(.easeInOut(duration: 0.4), value: progress)
+                }
+            }
+            .frame(height: 12)
+
+            // Completion message when goal reached
+            if isComplete {
+                HStack(spacing: 4) {
+                    Image(systemName: "party.popper.fill")
+                        .font(.caption)
+                    Text(NSLocalizedString("Goal reached! 🎉", comment: "Star goal completed celebration"))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                }
+                .foregroundStyle(Color(hex: "34d399"))
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.regularMaterial)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(isComplete ? Color(hex: "34d399").opacity(0.5) : Color(hex: "FFB800").opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
