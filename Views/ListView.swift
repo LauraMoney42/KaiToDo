@@ -68,6 +68,14 @@ struct ListView: View {
                             .scrollDismissesKeyboard(.immediately)
                             // Keep editMode inactive — drag-to-reorder works via long-press without visible handles
                             .environment(\.editMode, .constant(.inactive))
+                            // kai-sync-002: Pull-to-refresh for shared lists — manual sync trigger
+                            // when silent push is missed. Only shown on shared lists since local
+                            // lists have no remote data to refresh.
+                            .refreshable {
+                                if list.isShared {
+                                    await listsViewModel.syncSharedLists()
+                                }
+                            }
                         }
                     }
 
