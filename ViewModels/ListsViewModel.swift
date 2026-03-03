@@ -22,6 +22,9 @@ class ListsViewModel {
     /// coalesce into a single background write instead of blocking the main thread.
     private var pendingSave: Task<Void, Never>?
 
+    /// Track last sync time to debounce repeated foreground transitions
+    private var lastSyncTime: Date = .distantPast
+
     init() {
         // Load lists asynchronously so init() returns immediately — the main thread is
         // NOT blocked, allowing the splash screen to render on the very first frame.
@@ -36,6 +39,13 @@ class ListsViewModel {
                 StorageService.shared.loadLists()
             }.value
             self.lists = loaded
+
+            // MARK: - kai-sync-001: Launch sync for shared lists
+            // After loading from local storage, immediately sync shared lists with CloudKit
+            // so user sees fresh remote changes (from other participants) on every cold start.
+            // This fixes the case where user leaves app, family member checks items, and user
+            // relaunches — user would see stale data unless we pull from CloudKit here.
+            await self.syncSharedLists()
         }
 
         // Listen for CloudKit silent push notifications (via AppDelegate → NotificationCenter).
@@ -290,6 +300,16 @@ class ListsViewModel {
     }
 
     // MARK: - CloudKit Sync
+
+    /// MARK: - kai-sync-001: Foreground sync
+    /// Called when app enters foreground — syncs shared lists if enough time has passed
+    /// since last sync (debounce to 5s to avoid hammering CloudKit on rapid foreground transitions).
+    func syncWhenForeground() {
+        let now = Date()
+        guard now.timeIntervalSince(lastSyncTime) >= 5.0 else { return }
+        lastSyncTime = now
+        Task { await self.syncSharedLists() }
+    }
 
     func syncSharedLists() async {
         isSyncing = true

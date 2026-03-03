@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(UserViewModel.self) private var userViewModel
     @Environment(ListsViewModel.self) private var listsViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     @AppStorage("kaiColorScheme") private var colorSchemeRaw: String = "system"
     @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding: Bool = false
@@ -26,6 +27,14 @@ struct ContentView: View {
         .preferredColorScheme(resolvedColorScheme)
         .task {
             await requestNotificationPermission()
+        }
+        // MARK: - kai-sync-001: Foreground sync
+        // When app enters foreground, sync shared lists with CloudKit in case other participants
+        // made changes while this user was away. Debounced to 5s to avoid hammering CloudKit.
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                listsViewModel.syncWhenForeground()
+            }
         }
     }
 
