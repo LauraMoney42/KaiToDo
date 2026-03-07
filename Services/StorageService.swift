@@ -1,4 +1,5 @@
 import Foundation
+import CloudKit
 
 @Observable
 class StorageService {
@@ -6,6 +7,8 @@ class StorageService {
 
     private let listsKey = "kaitodo.lists"
     private let profileKey = "kaitodo.profile"
+    private let zoneChangeTokensKey = "kaitodo.zoneChangeTokens"
+    private let dbChangeTokensKey = "kaitodo.dbChangeTokens"
 
     private init() {}
 
@@ -62,5 +65,54 @@ class StorageService {
     func clearAll() {
         UserDefaults.standard.removeObject(forKey: listsKey)
         UserDefaults.standard.removeObject(forKey: profileKey)
+    }
+
+    // MARK: - Change Tokens (Phase 3: Delta Sync)
+
+    /// Persist a zone-level change token for incremental sync.
+    func saveChangeToken(_ token: CKServerChangeToken, forZone zoneName: String) {
+        var tokens = loadAllZoneTokenData()
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true) {
+            tokens[zoneName] = data
+        }
+        UserDefaults.standard.set(tokens, forKey: zoneChangeTokensKey)
+    }
+
+    /// Load a previously stored zone-level change token. Returns nil for initial full fetch.
+    func loadChangeToken(forZone zoneName: String) -> CKServerChangeToken? {
+        let tokens = loadAllZoneTokenData()
+        guard let data = tokens[zoneName] else { return nil }
+        return try? NSKeyedUnarchiver.unarchivedObject(ofClass: CKServerChangeToken.self, from: data)
+    }
+
+    /// Clear a zone's change token (e.g. on token expiry).
+    func clearChangeToken(forZone zoneName: String) {
+        var tokens = loadAllZoneTokenData()
+        tokens.removeValue(forKey: zoneName)
+        UserDefaults.standard.set(tokens, forKey: zoneChangeTokensKey)
+    }
+
+    /// Persist a database-level change token.
+    func saveDatabaseChangeToken(_ token: CKServerChangeToken, forDatabase dbName: String) {
+        var tokens = loadAllDBTokenData()
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: token, requiringSecureCoding: true) {
+            tokens[dbName] = data
+        }
+        UserDefaults.standard.set(tokens, forKey: dbChangeTokensKey)
+    }
+
+    /// Load a previously stored database-level change token.
+    func loadDatabaseChangeToken(forDatabase dbName: String) -> CKServerChangeToken? {
+        let tokens = loadAllDBTokenData()
+        guard let data = tokens[dbName] else { return nil }
+        return try? NSKeyedUnarchiver.unarchivedObject(ofClass: CKServerChangeToken.self, from: data)
+    }
+
+    private func loadAllZoneTokenData() -> [String: Data] {
+        UserDefaults.standard.dictionary(forKey: zoneChangeTokensKey) as? [String: Data] ?? [:]
+    }
+
+    private func loadAllDBTokenData() -> [String: Data] {
+        UserDefaults.standard.dictionary(forKey: dbChangeTokensKey) as? [String: Data] ?? [:]
     }
 }

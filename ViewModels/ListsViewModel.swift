@@ -35,9 +35,13 @@ class ListsViewModel {
         // splash window comfortably covers the async gap.
         Task { @MainActor [weak self] in
             guard let self else { return }
-            let loaded = await Task.detached(priority: .userInitiated) {
+            var loaded = await Task.detached(priority: .userInitiated) {
                 StorageService.shared.loadLists()
             }.value
+            // Normalize sortOrder for any tasks from before fractional indexing was added
+            for i in loaded.indices {
+                FractionalIndex.normalizeIfNeeded(&loaded[i].tasks)
+            }
             self.lists = loaded
 
             // MARK: - kai-sync-001: Launch sync for shared lists
@@ -70,7 +74,11 @@ class ListsViewModel {
     /// Synchronous load — kept for explicit call sites that need immediate data
     /// (e.g. after a CloudKit sync writes new data and calls this directly).
     func loadLists() {
-        lists = storage.loadLists()
+        var loaded = storage.loadLists()
+        for i in loaded.indices {
+            FractionalIndex.normalizeIfNeeded(&loaded[i].tasks)
+        }
+        lists = loaded
     }
 
     func saveLists() {
@@ -182,7 +190,8 @@ class ListsViewModel {
 
     func addTask(to listID: UUID, text: String) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
-        let task = TodoTask(text: text)
+        let lastOrder = lists[index].tasks.last?.sortOrder ?? 0.0
+        let task = TodoTask(text: text, sortOrder: FractionalIndex.after(lastOrder))
         lists[index].tasks.append(task)
         saveLists()
     }
@@ -234,17 +243,97 @@ class ListsViewModel {
         saveLists()
     }
 
-    /// Reorders tasks within a list using IndexSet from `.onMove`. Persists immediately.
+    /// Reorders tasks within a list using IndexSet from `.onMove`. Recalculates the
+    /// moved task's sortOrder as a fractional index between its new neighbors, then
+    /// syncs to CloudKit so order propagates to other devices.
     func moveTask(in listID: UUID, from source: IndexSet, to destination: Int) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
         lists[index].tasks.move(fromOffsets: source, toOffset: destination)
+
+        // Determine the actual index of the moved task after the move
+        let movedIndex: Int
+        if let sourceIndex = source.first {
+            movedIndex = sourceIndex < destination ? destination - 1 : destination
+        } else {
+            movedIndex = destination
+        }
+
+        // Recalculate sortOrder as midpoint between new neighbors
+        let tasks = lists[index].tasks
+        if tasks.indices.contains(movedIndex) {
+            let prev = movedIndex > 0 ? (tasks[movedIndex - 1].sortOrder ?? Double(movedIndex - 1)) : nil
+            let next = movedIndex < tasks.count - 1 ? (tasks[movedIndex + 1].sortOrder ?? Double(movedIndex + 1)) : nil
+
+            let newOrder: Double
+            if let p = prev, let n = next {
+                newOrder = FractionalIndex.between(p, n)
+                // Check for precision exhaustion
+                if abs(n - p) < FractionalIndex.minGap {
+                    FractionalIndex.renormalize(&lists[index].tasks)
+                } else {
+                    lists[index].tasks[movedIndex].sortOrder = newOrder
+                }
+            } else if let p = prev {
+                lists[index].tasks[movedIndex].sortOrder = FractionalIndex.after(p)
+            } else if let n = next {
+                lists[index].tasks[movedIndex].sortOrder = FractionalIndex.before(n)
+            }
+        }
+
         saveLists()
+
+        // kai-sync-006: Sync sortOrder changes to CloudKit.
+        // If renormalize fired, ALL tasks got new sortOrders — sync them all.
+        // Otherwise, only the moved task needs syncing.
+        if lists[index].isShared {
+            let renormalized = tasks.indices.contains(movedIndex) &&
+                lists[index].tasks[movedIndex].sortOrder != nil &&
+                (movedIndex > 0 ? lists[index].tasks[movedIndex - 1].sortOrder == Double(movedIndex) : false)
+
+            if renormalized || !tasks.indices.contains(movedIndex) {
+                // Renormalization occurred — sync all tasks with cloudRecordIDs
+                for task in lists[index].tasks where task.cloudRecordID != nil {
+                    syncTaskToCloud(listID: listID, task: task)
+                }
+            } else {
+                // Normal case — only sync the moved task
+                syncTaskToCloud(listID: listID, task: lists[index].tasks[movedIndex])
+            }
+        }
     }
 
     func deleteTask(in listID: UUID, taskID: UUID) {
         guard let listIndex = lists.firstIndex(where: { $0.id == listID }) else { return }
+
+        // kai-sync-006: Capture the task's cloudRecordID BEFORE removing it locally,
+        // so we can delete the CKRecord from CloudKit. Previously, deleteTask only
+        // removed locally — deleted tasks reappeared on next sync.
+        let task = lists[listIndex].tasks.first { $0.id == taskID }
+        let cloudRecordID = task?.cloudRecordID
+        let list = lists[listIndex]
+
         lists[listIndex].tasks.removeAll { $0.id == taskID }
         saveLists()
+
+        // Delete from CloudKit if this is a shared list with a synced task
+        if list.isShared, let recordName = cloudRecordID {
+            if list.isMigratedToPrivateDB,
+               let zoneName = list.zoneID,
+               let ownerName = list.zoneOwnerName {
+                // Phase 2: Delete from private/shared zone
+                let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: ownerName)
+                let recordID = CKRecord.ID(recordName: recordName, zoneID: zoneID)
+                Task {
+                    try? await CloudKitService.shared.deleteTaskInZone(recordID, zoneID: zoneID)
+                }
+            } else {
+                // Legacy: Delete from public DB (only works if we created the record)
+                let recordID = CKRecord.ID(recordName: recordName)
+                Task {
+                    try? await CloudKitService.shared.deleteTask(recordID)
+                }
+            }
+        }
     }
 
     /// Uncheck all tasks in a list so it can be reused, preserving the tasks themselves
@@ -331,13 +420,14 @@ class ListsViewModel {
         syncError = nil
 
         do {
-            // Sync each shared list we own or participate in
             for list in lists where list.isShared && list.cloudRecordID != nil {
-                try await syncList(list)
+                if list.isMigratedToPrivateDB {
+                    try await syncListPrivate(list)
+                } else {
+                    try await syncListLegacy(list)
+                }
             }
-            await MainActor.run {
-                isSyncing = false
-            }
+            await MainActor.run { isSyncing = false }
         } catch {
             await MainActor.run {
                 isSyncing = false
@@ -346,12 +436,167 @@ class ListsViewModel {
         }
     }
 
-    private func syncList(_ list: TodoList) async throws {
+    // MARK: - Phase 2+3: Private DB sync with delta support
+
+    private func syncListPrivate(_ list: TodoList) async throws {
+        guard let cloudRecordID = list.cloudRecordID,
+              let zoneName = list.zoneID,
+              let ownerName = list.zoneOwnerName else { return }
+
+        let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: ownerName)
+        let previousToken = StorageService.shared.loadChangeToken(forZone: zoneName)
+
+        // Phase 3: Try delta sync if we have a change token
+        if previousToken != nil {
+            do {
+                try await syncListDelta(list, zoneID: zoneID, cloudRecordID: cloudRecordID, token: previousToken)
+                return
+            } catch let error as CKError where error.code == .changeTokenExpired {
+                // Token expired — clear it and fall through to full fetch
+                StorageService.shared.clearChangeToken(forZone: zoneName)
+                print("⚠️ Change token expired for \(zoneName), performing full fetch")
+            }
+        }
+
+        // Full fetch (first sync or token expired)
+        async let remoteTasksFetch = CloudKitService.shared.fetchTasksInZone(zoneID)
+        async let starDataFetch = CloudKitService.shared.fetchListStarDataInZone(zoneID, cloudRecordID: cloudRecordID)
+
+        let remoteTasks = try await remoteTasksFetch
+        let starData = try await starDataFetch
+
+        // After full fetch, get a change token for future delta syncs
+        let initialChanges = try? await CloudKitService.shared.fetchZoneChanges(zoneID: zoneID, since: nil)
+        if let token = initialChanges?.newChangeToken {
+            StorageService.shared.saveChangeToken(token, forZone: zoneName)
+        }
+
+        await MainActor.run {
+            guard let index = lists.firstIndex(where: { $0.id == list.id }) else { return }
+
+            lists[index].starCount = max(lists[index].starCount, starData.starCount)
+            lists[index].starGoal = starData.starGoal
+            lists[index].rewardText = starData.rewardText
+            lists[index].rewardGiven = starData.rewardGiven
+
+            let mergedTasks = mergeTasks(local: lists[index].tasks, remote: remoteTasks, listIndex: index)
+            lists[index].tasks = mergedTasks
+            saveLists()
+
+            if lists[index].starCount != starData.starCount {
+                let updatedList = lists[index]
+                Task {
+                    try? await CloudKitService.shared.updateListStarDataInZone(
+                        zoneID, cloudRecordID: cloudRecordID,
+                        starCount: updatedList.starCount,
+                        starGoal: updatedList.starGoal,
+                        rewardText: updatedList.rewardText,
+                        rewardGiven: updatedList.rewardGiven
+                    )
+                }
+            }
+        }
+    }
+
+    // MARK: - Phase 3: Delta sync (change tokens)
+
+    /// Incremental sync — only fetches records that changed since the last token.
+    private func syncListDelta(_ list: TodoList, zoneID: CKRecordZone.ID, cloudRecordID: String, token: CKServerChangeToken?) async throws {
+        var currentToken = token
+        var allChangedRecords: [CKRecord] = []
+        var allDeletedIDs: [CKRecord.ID] = []
+        var hasMore = true
+
+        // Paginate until no more changes
+        while hasMore {
+            let batch = try await CloudKitService.shared.fetchZoneChanges(zoneID: zoneID, since: currentToken)
+            allChangedRecords.append(contentsOf: batch.changedRecords)
+            allDeletedIDs.append(contentsOf: batch.deletedRecordIDs)
+            currentToken = batch.newChangeToken
+            hasMore = batch.hasMoreChanges
+        }
+
+        // Persist the new token for next sync
+        if let newToken = currentToken, let zoneName = list.zoneID {
+            StorageService.shared.saveChangeToken(newToken, forZone: zoneName)
+        }
+
+        await MainActor.run {
+            guard let index = lists.firstIndex(where: { $0.id == list.id }) else { return }
+
+            // Apply changed records
+            for record in allChangedRecords {
+                if record.recordType == "SharedList" {
+                    // Update list metadata
+                    let starCount = (record["starCount"] as? Int64).map(Int.init) ?? lists[index].starCount
+                    lists[index].starCount = max(lists[index].starCount, starCount)
+                    lists[index].starGoal = (record["starGoal"] as? Int64).map(Int.init)
+                    lists[index].rewardText = record["rewardText"] as? String
+                    lists[index].rewardGiven = (record["rewardGiven"] as? Int64 ?? 0) == 1
+                } else if record.recordType == "SharedTask" {
+                    let remoteTask = TodoTask(
+                        id: UUID(),
+                        cloudRecordID: record.recordID.recordName,
+                        text: record["text"] as? String ?? "",
+                        isCompleted: (record["isCompleted"] as? Int64 ?? 0) == 1,
+                        completedBy: record["completedBy"] as? String,
+                        completedByName: record["completedByName"] as? String,
+                        completedAt: record["completedAt"] as? Date,
+                        createdAt: record.creationDate ?? Date(),
+                        modifiedAt: record.modificationDate ?? Date(),
+                        sortOrder: record["sortOrder"] as? Double
+                    )
+
+                    // Upsert: find existing by cloudRecordID, or add new
+                    if let taskIdx = lists[index].tasks.firstIndex(where: { $0.cloudRecordID == record.recordID.recordName }) {
+                        let local = lists[index].tasks[taskIdx]
+                        if remoteTask.modifiedAt > local.modifiedAt {
+                            // Track remote completion for star awarding
+                            if remoteTask.isCompleted && !local.isCompleted {
+                                lists[index].starCount += 1
+                            }
+                            lists[index].tasks[taskIdx] = TodoTask(
+                                id: local.id,
+                                cloudRecordID: remoteTask.cloudRecordID,
+                                text: remoteTask.text,
+                                isCompleted: remoteTask.isCompleted,
+                                completedBy: remoteTask.completedBy,
+                                completedByName: remoteTask.completedByName,
+                                completedAt: remoteTask.completedAt,
+                                createdAt: remoteTask.createdAt,
+                                modifiedAt: remoteTask.modifiedAt,
+                                sortOrder: remoteTask.sortOrder ?? local.sortOrder
+                            )
+                        }
+                    } else {
+                        // New task from remote
+                        if remoteTask.isCompleted { lists[index].starCount += 1 }
+                        lists[index].tasks.append(remoteTask)
+                    }
+                }
+            }
+
+            // Apply deletions
+            let deletedNames = Set(allDeletedIDs.map { $0.recordName })
+            lists[index].tasks.removeAll { task in
+                guard let cid = task.cloudRecordID else { return false }
+                return deletedNames.contains(cid)
+            }
+
+            // Sort by sortOrder
+            lists[index].tasks.sort { ($0.sortOrder ?? 0) < ($1.sortOrder ?? 0) }
+
+            saveLists()
+        }
+    }
+
+    // MARK: - Legacy: Public DB sync (pre-migration lists)
+
+    private func syncListLegacy(_ list: TodoList) async throws {
         guard let cloudRecordID = list.cloudRecordID else { return }
 
         let recordID = CKRecord.ID(recordName: cloudRecordID)
 
-        // Fetch latest tasks AND star data from CloudKit in parallel
         async let remoteTasksFetch = CloudKitService.shared.fetchTasks(forListID: recordID)
         async let starDataFetch = CloudKitService.shared.fetchListStarData(cloudRecordID: cloudRecordID)
 
@@ -361,100 +606,16 @@ class ListsViewModel {
         await MainActor.run {
             guard let index = lists.firstIndex(where: { $0.id == list.id }) else { return }
 
-            // kai-sync-003 Bug 1: Sync star/reward fields from CloudKit → local
-            // kai-sync-004: Use max(local, remote) for starCount so participant-earned
-            // stars aren't overwritten by stale CloudKit data. The participant can't
-            // write star updates to CloudKit (permission denied on public DB), so their
-            // local count may be higher. Owner's authoritative count is pushed separately
-            // (see owner star-push block below).
             lists[index].starCount = max(lists[index].starCount, starData.starCount)
             lists[index].starGoal = starData.starGoal
             lists[index].rewardText = starData.rewardText
             lists[index].rewardGiven = starData.rewardGiven
 
-            // kai-sync-003 Bug 2: Merge tasks by cloudRecordID with timestamp comparison
-            // instead of blind overwrite. Only accept remote version if it's newer.
-            let localByCloudID = Dictionary(
-                uniqueKeysWithValues: lists[index].tasks
-                    .compactMap { task -> (String, TodoTask)? in
-                        guard let cid = task.cloudRecordID else { return nil }
-                        return (cid, task)
-                    }
-            )
-
-            var mergedTasks: [TodoTask] = []
-            // kai-sync-004: Track how many tasks flipped from incomplete→complete
-            // during this sync (i.e. completed by the other participant remotely).
-            // We award stars for these so the owner's star count stays accurate
-            // and gets pushed to CloudKit for the participant to see.
-            var remoteCompletions = 0
-
-            for remoteTask in remoteTasks {
-                guard let remoteCID = remoteTask.cloudRecordID else {
-                    mergedTasks.append(remoteTask)
-                    continue
-                }
-
-                if let localTask = localByCloudID[remoteCID] {
-                    // Both exist — keep whichever was modified more recently
-                    if remoteTask.modifiedAt > localTask.modifiedAt {
-                        // kai-sync-004: Detect remote completion (other user toggled this task)
-                        if remoteTask.isCompleted && !localTask.isCompleted {
-                            remoteCompletions += 1
-                        }
-                        // Remote is newer — accept it but preserve local UUID for SwiftUI identity
-                        var accepted = remoteTask
-                        accepted = TodoTask(
-                            id: localTask.id,
-                            cloudRecordID: remoteCID,
-                            text: remoteTask.text,
-                            isCompleted: remoteTask.isCompleted,
-                            completedBy: remoteTask.completedBy,
-                            completedByName: remoteTask.completedByName,
-                            completedAt: remoteTask.completedAt,
-                            createdAt: remoteTask.createdAt,
-                            modifiedAt: remoteTask.modifiedAt
-                        )
-                        mergedTasks.append(accepted)
-                    } else {
-                        // Local is newer or same — keep local version (daughter's toggle wins)
-                        mergedTasks.append(localTask)
-                    }
-                } else {
-                    // New task from remote — add it
-                    // kai-sync-004: If it's already completed, count as remote completion
-                    if remoteTask.isCompleted {
-                        remoteCompletions += 1
-                    }
-                    mergedTasks.append(remoteTask)
-                }
-            }
-
-            // Keep local-only tasks (not yet pushed to CloudKit) so they aren't lost
-            for localTask in lists[index].tasks where localTask.cloudRecordID == nil {
-                mergedTasks.append(localTask)
-            }
-
+            let mergedTasks = mergeTasks(local: lists[index].tasks, remote: remoteTasks, listIndex: index)
             lists[index].tasks = mergedTasks
-
-            // kai-sync-004: Award stars for tasks completed remotely by other participant.
-            // This ensures the owner's star count reflects ALL completions (not just their own),
-            // and the updated count gets pushed to CloudKit for participants to see.
-            if remoteCompletions > 0 {
-                lists[index].starCount += remoteCompletions
-                // Also check if all tasks are now completed for bonus star
-                if !lists[index].tasks.isEmpty &&
-                   lists[index].tasks.allSatisfy({ $0.isCompleted }) {
-                    lists[index].starCount += 1
-                }
-            }
             saveLists()
 
-            // kai-sync-004: If we're the list OWNER and the remote star count differs from
-            // what we have locally (e.g. daughter earned stars that only saved locally on her
-            // device), push our authoritative star data back to CloudKit.
-            // This closes the loop: daughter completes tasks → her device creates replacement
-            // task records → owner syncs and sees them → owner pushes updated star count.
+            // Only owner can push star data in legacy (public DB) mode
             if lists[index].shareType == .owned,
                lists[index].starCount != starData.starCount {
                 let updatedList = lists[index]
@@ -471,6 +632,74 @@ class ListsViewModel {
         }
     }
 
+    /// Shared merge logic for both private and legacy sync paths.
+    /// Merges remote tasks with local tasks by cloudRecordID, using timestamp-based LWW.
+    private func mergeTasks(local localTasks: [TodoTask], remote remoteTasks: [TodoTask], listIndex: Int) -> [TodoTask] {
+        let localByCloudID = Dictionary(
+            uniqueKeysWithValues: localTasks
+                .compactMap { task -> (String, TodoTask)? in
+                    guard let cid = task.cloudRecordID else { return nil }
+                    return (cid, task)
+                }
+        )
+
+        var mergedTasks: [TodoTask] = []
+        var remoteCompletions = 0
+
+        for remoteTask in remoteTasks {
+            guard let remoteCID = remoteTask.cloudRecordID else {
+                mergedTasks.append(remoteTask)
+                continue
+            }
+
+            if let localTask = localByCloudID[remoteCID] {
+                if remoteTask.modifiedAt > localTask.modifiedAt {
+                    if remoteTask.isCompleted && !localTask.isCompleted {
+                        remoteCompletions += 1
+                    }
+                    let accepted = TodoTask(
+                        id: localTask.id,
+                        cloudRecordID: remoteCID,
+                        text: remoteTask.text,
+                        isCompleted: remoteTask.isCompleted,
+                        completedBy: remoteTask.completedBy,
+                        completedByName: remoteTask.completedByName,
+                        completedAt: remoteTask.completedAt,
+                        createdAt: remoteTask.createdAt,
+                        modifiedAt: remoteTask.modifiedAt,
+                        sortOrder: remoteTask.sortOrder ?? localTask.sortOrder
+                    )
+                    mergedTasks.append(accepted)
+                } else {
+                    mergedTasks.append(localTask)
+                }
+            } else {
+                if remoteTask.isCompleted { remoteCompletions += 1 }
+                mergedTasks.append(remoteTask)
+            }
+        }
+
+        // Keep local-only tasks (not yet pushed to CloudKit)
+        for localTask in localTasks where localTask.cloudRecordID == nil {
+            mergedTasks.append(localTask)
+        }
+
+        FractionalIndex.normalizeIfNeeded(&mergedTasks)
+        mergedTasks.sort { ($0.sortOrder ?? 0) < ($1.sortOrder ?? 0) }
+
+        // Award stars for remote completions
+        if remoteCompletions > 0 {
+            lists[listIndex].starCount += remoteCompletions
+            if !mergedTasks.isEmpty && mergedTasks.allSatisfy({ $0.isCompleted }) {
+                lists[listIndex].starCount += 1
+            }
+        }
+
+        return mergedTasks
+    }
+
+    // MARK: - Sync Task to Cloud (dual-path)
+
     func syncTaskToCloud(listID: UUID, task: TodoTask) {
         guard let list = getList(by: listID),
               list.isShared,
@@ -478,29 +707,51 @@ class ListsViewModel {
             return
         }
 
-        Task {
-            do {
-                let recordID = CKRecord.ID(recordName: cloudRecordID)
-                let savedRecord = try await CloudKitService.shared.saveTask(task, listRecordID: recordID)
-                // Write the CloudKit record name back onto the local task so future syncs
-                // update the existing record instead of creating a duplicate.
-                // kai-sync-004: Also update if the recordName CHANGED (participant created
-                // a replacement record because they couldn't modify the original).
-                let newRecordName = savedRecord.recordID.recordName
-                await MainActor.run {
-                    if let listIndex = lists.firstIndex(where: { $0.id == listID }),
-                       let taskIndex = lists[listIndex].tasks.firstIndex(where: { $0.id == task.id }) {
-                        if lists[listIndex].tasks[taskIndex].cloudRecordID != newRecordName {
-                            lists[listIndex].tasks[taskIndex].cloudRecordID = newRecordName
+        if list.isMigratedToPrivateDB,
+           let zoneName = list.zoneID,
+           let ownerName = list.zoneOwnerName {
+            // Phase 2: Save directly to zone (no replacement record needed)
+            let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: ownerName)
+            let listRecordID = CKRecord.ID(recordName: cloudRecordID, zoneID: zoneID)
+            Task {
+                do {
+                    let savedRecord = try await CloudKitService.shared.saveTaskInZone(
+                        task, listRecordID: listRecordID, zoneID: zoneID
+                    )
+                    let newRecordName = savedRecord.recordID.recordName
+                    await MainActor.run {
+                        if let li = lists.firstIndex(where: { $0.id == listID }),
+                           let ti = lists[li].tasks.firstIndex(where: { $0.id == task.id }),
+                           lists[li].tasks[ti].cloudRecordID != newRecordName {
+                            lists[li].tasks[ti].cloudRecordID = newRecordName
                             saveLists()
                         }
                     }
+                } catch {
+                    print("Failed to sync task to zone: \(error)")
                 }
-            } catch {
-                await MainActor.run {
-                    syncError = "Failed to sync task: \(error.localizedDescription)"
+            }
+        } else {
+            // Legacy: Public DB with replacement record pattern
+            Task {
+                do {
+                    let recordID = CKRecord.ID(recordName: cloudRecordID)
+                    let savedRecord = try await CloudKitService.shared.saveTask(task, listRecordID: recordID)
+                    let newRecordName = savedRecord.recordID.recordName
+                    await MainActor.run {
+                        if let li = lists.firstIndex(where: { $0.id == listID }),
+                           let ti = lists[li].tasks.firstIndex(where: { $0.id == task.id }),
+                           lists[li].tasks[ti].cloudRecordID != newRecordName {
+                            lists[li].tasks[ti].cloudRecordID = newRecordName
+                            saveLists()
+                        }
+                    }
+                } catch {
+                    await MainActor.run {
+                        syncError = "Failed to sync task: \(error.localizedDescription)"
+                    }
+                    print("Failed to sync task to CloudKit: \(error)")
                 }
-                print("Failed to sync task to CloudKit: \(error)")
             }
         }
     }
@@ -517,33 +768,40 @@ class ListsViewModel {
         saveLists()
         NotificationCenter.default.post(name: .starEarned, object: nil)
 
-        // Sync star/reward fields to CloudKit for shared lists (kai-sync-003 Bug 1).
-        // kai-sync-004: Only the list OWNER can modify the SharedList CKRecord.
-        // Participants save locally (already done above) — their star count propagates
-        // when the owner's device syncs and sees the completed tasks, then recalculates.
         let list = lists[listIndex]
-        guard list.isShared,
-              list.shareType == .owned,  // only owner can write to SharedList record
-              let cloudRecordID = list.cloudRecordID else { return }
-        let snapshot = (list.starCount, list.starGoal, list.rewardText, list.rewardGiven)
-        Task {
-            do {
-                try await CloudKitService.shared.updateListStarData(
-                    cloudRecordID: cloudRecordID,
-                    starCount: snapshot.0,
-                    starGoal: snapshot.1,
-                    rewardText: snapshot.2,
-                    rewardGiven: snapshot.3
+        guard list.isShared, let cloudRecordID = list.cloudRecordID else { return }
+
+        if list.isMigratedToPrivateDB,
+           let zoneName = list.zoneID,
+           let ownerName = list.zoneOwnerName {
+            // Phase 2: Any participant can write star data via CKShare
+            let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: ownerName)
+            let snapshot = (list.starCount, list.starGoal, list.rewardText, list.rewardGiven)
+            Task {
+                try? await CloudKitService.shared.updateListStarDataInZone(
+                    zoneID, cloudRecordID: cloudRecordID,
+                    starCount: snapshot.0, starGoal: snapshot.1,
+                    rewardText: snapshot.2, rewardGiven: snapshot.3
                 )
-            } catch {
-                print("⭐ Failed to sync star data to CloudKit: \(error)")
+            }
+        } else {
+            // Legacy: Only the owner can modify the SharedList record in public DB
+            guard list.shareType == .owned else { return }
+            let snapshot = (list.starCount, list.starGoal, list.rewardText, list.rewardGiven)
+            Task {
+                try? await CloudKitService.shared.updateListStarData(
+                    cloudRecordID: cloudRecordID,
+                    starCount: snapshot.0, starGoal: snapshot.1,
+                    rewardText: snapshot.2, rewardGiven: snapshot.3
+                )
             }
         }
     }
 
     func addTaskWithSync(to listID: UUID, text: String) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
-        let task = TodoTask(text: text)
+        let lastOrder = lists[index].tasks.last?.sortOrder ?? 0.0
+        let task = TodoTask(text: text, sortOrder: FractionalIndex.after(lastOrder))
         lists[index].tasks.append(task)
         saveLists()
 

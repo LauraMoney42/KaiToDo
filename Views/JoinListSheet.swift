@@ -1,4 +1,5 @@
 import SwiftUI
+import CloudKit
 
 struct JoinListSheet: View {
     @Environment(ListsViewModel.self) private var listsViewModel
@@ -115,41 +116,82 @@ struct JoinListSheet: View {
 
         Task {
             do {
-                // Find the shared list by invite code
-                if let (record, tasks) = try await CloudKitService.shared.fetchSharedList(byInviteCode: inviteCode) {
-                    // Create local copy of the shared list — include star/reward fields
-                    // so participant sees reward progress immediately (kai-sync-004 fix).
-                    let sharedList = TodoList(
-                        name: record["name"] as? String ?? "Shared List",
-                        color: record["color"] as? String ?? "7161EF",
-                        tasks: tasks,
-                        cloudRecordID: record.recordID.recordName,
-                        isShared: true,
-                        shareType: .participant,
-                        ownerID: record["ownerID"] as? String,
-                        ownerName: record["ownerName"] as? String,
-                        inviteCode: inviteCode,
-                        starCount: (record["starCount"] as? Int64).map(Int.init) ?? 0,
-                        starGoal: (record["starGoal"] as? Int64).map(Int.init),
-                        rewardText: record["rewardText"] as? String,
-                        rewardGiven: (record["rewardGiven"] as? Int64 ?? 0) == 1
-                    )
+                // Look up the invitation record by invite code (always in public DB)
+                guard let invitation = try await CloudKitService.shared.findInvitation(byCode: inviteCode) else {
+                    await MainActor.run {
+                        isJoining = false
+                        errorMessage = "No list found with that code. Please check and try again."
+                    }
+                    return
+                }
 
-                    // Try to register as participant — non-fatal if permission denied
-                    // (CloudKit public DB only allows the record creator to modify it)
-                    do {
-                        try await CloudKitService.shared.addParticipant(
-                            userID: userViewModel.userID,
-                            userName: userViewModel.nickname,
-                            toListRecord: record
-                        )
-                    } catch {
-                        print("⚠️ Could not register participant (non-fatal): \(error)")
+                // Check if the invitation has been migrated to CKShare (Phase 2)
+                let isMigrated = (invitation["migratedToPrivateDB"] as? Int64 ?? 0) == 1
+                let shareURLString = invitation["shareURL"] as? String
+                let zoneName = invitation["zoneName"] as? String
+                let zoneOwnerName = invitation["zoneOwnerName"] as? String
+
+                if isMigrated, let urlString = shareURLString, let shareURL = URL(string: urlString),
+                   let zoneName, let zoneOwnerName {
+                    // Phase 2 path: accept CKShare, then fetch from shared DB
+                    try await CloudKitService.shared.acceptShare(url: shareURL)
+
+                    // Brief pause to let CloudKit propagate the accepted share
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+
+                    let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: zoneOwnerName)
+
+                    // Retry fetching tasks (zone may take a moment to appear after acceptance)
+                    var tasks: [TodoTask] = []
+                    var fetchError: Error?
+                    for attempt in 1...3 {
+                        do {
+                            tasks = try await CloudKitService.shared.fetchTasksInZone(zoneID)
+                            fetchError = nil
+                            break
+                        } catch {
+                            fetchError = error
+                            if attempt < 3 {
+                                try await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                            }
+                        }
+                    }
+                    if let fetchError { throw fetchError }
+
+                    // Fetch the SharedList record from the shared zone to get metadata
+                    let db = CloudKitService.shared.database(for: zoneID)
+                    let query = CKQuery(recordType: "SharedList", predicate: NSPredicate(value: true))
+                    let (results, _) = try await db.records(matching: query, inZoneWith: zoneID)
+                    var listRecord: CKRecord?
+                    for (_, result) in results {
+                        if case .success(let record) = result {
+                            listRecord = record
+                            break
+                        }
                     }
 
-                    // Always add locally — this is the core join action
+                    let record = listRecord
+                    let sharedList = TodoList(
+                        name: record?["name"] as? String ?? "Shared List",
+                        color: record?["color"] as? String ?? "7161EF",
+                        tasks: tasks,
+                        cloudRecordID: record?.recordID.recordName,
+                        isShared: true,
+                        shareType: .participant,
+                        ownerID: record?["ownerID"] as? String,
+                        ownerName: record?["ownerName"] as? String,
+                        inviteCode: inviteCode,
+                        zoneID: zoneName,
+                        zoneOwnerName: zoneOwnerName,
+                        isMigratedToPrivateDB: true,
+                        starCount: (record?["starCount"] as? Int64).map(Int.init) ?? 0,
+                        starGoal: (record?["starGoal"] as? Int64).map(Int.init),
+                        rewardText: record?["rewardText"] as? String,
+                        rewardGiven: (record?["rewardGiven"] as? Int64 ?? 0) == 1
+                    )
+
                     await MainActor.run {
-                        if !listsViewModel.lists.contains(where: { $0.cloudRecordID == record.recordID.recordName }) {
+                        if !listsViewModel.lists.contains(where: { $0.zoneID == zoneName }) {
                             listsViewModel.lists.append(sharedList)
                             listsViewModel.saveLists()
                         }
@@ -157,9 +199,44 @@ struct JoinListSheet: View {
                         dismiss()
                     }
                 } else {
-                    await MainActor.run {
-                        isJoining = false
-                        errorMessage = "No list found with that code. Please check and try again."
+                    // Legacy path: fetch from public DB (pre-migration lists)
+                    if let (record, tasks) = try await CloudKitService.shared.fetchSharedList(byInviteCode: inviteCode) {
+                        let sharedList = TodoList(
+                            name: record["name"] as? String ?? "Shared List",
+                            color: record["color"] as? String ?? "7161EF",
+                            tasks: tasks,
+                            cloudRecordID: record.recordID.recordName,
+                            isShared: true,
+                            shareType: .participant,
+                            ownerID: record["ownerID"] as? String,
+                            ownerName: record["ownerName"] as? String,
+                            inviteCode: inviteCode,
+                            starCount: (record["starCount"] as? Int64).map(Int.init) ?? 0,
+                            starGoal: (record["starGoal"] as? Int64).map(Int.init),
+                            rewardText: record["rewardText"] as? String,
+                            rewardGiven: (record["rewardGiven"] as? Int64 ?? 0) == 1
+                        )
+
+                        // Try to register as participant (non-fatal)
+                        try? await CloudKitService.shared.addParticipant(
+                            userID: userViewModel.userID,
+                            userName: userViewModel.nickname,
+                            toListRecord: record
+                        )
+
+                        await MainActor.run {
+                            if !listsViewModel.lists.contains(where: { $0.cloudRecordID == record.recordID.recordName }) {
+                                listsViewModel.lists.append(sharedList)
+                                listsViewModel.saveLists()
+                            }
+                            isJoining = false
+                            dismiss()
+                        }
+                    } else {
+                        await MainActor.run {
+                            isJoining = false
+                            errorMessage = "No list found with that code. Please check and try again."
+                        }
                     }
                 }
             } catch {

@@ -193,48 +193,64 @@ struct ShareListSheet: View {
             return
         }
 
-        // Save to CloudKit
+        // Save to CloudKit using CKShare + Private DB (Phase 2)
         Task {
             do {
-                if let list = listsViewModel.getList(by: listID) {
-                    let record = try await CloudKitService.shared.saveSharedList(
-                        list,
-                        ownerID: userViewModel.userID,
-                        ownerName: userViewModel.nickname
+                guard var list = listsViewModel.getList(by: listID) else { return }
+
+                // 1. Create a custom zone for this list
+                let zoneName = "KaiList-\(list.id.uuidString)"
+                let zone = try await CloudKitService.shared.createZone(named: zoneName)
+
+                // 2. Save SharedList record into the zone
+                let record = try await CloudKitService.shared.saveSharedListInZone(
+                    list,
+                    ownerID: userViewModel.userID,
+                    ownerName: userViewModel.nickname,
+                    zoneID: zone.zoneID
+                )
+
+                // 3. Save all existing tasks into the zone
+                var taskRecordIDs: [UUID: String] = [:]
+                for task in list.tasks {
+                    let taskRecord = try await CloudKitService.shared.saveTaskInZone(
+                        task, listRecordID: record.recordID, zoneID: zone.zoneID
                     )
+                    taskRecordIDs[task.id] = taskRecord.recordID.recordName
+                }
 
-                    // Save all existing tasks to CloudKit and collect their record IDs.
-                    // Storing cloudRecordID on each task ensures future toggles UPDATE the
-                    // existing record rather than creating duplicate records in CloudKit.
-                    var taskRecordIDs: [UUID: String] = [:]
-                    for task in list.tasks {
-                        let taskRecord = try await CloudKitService.shared.saveTask(task, listRecordID: record.recordID)
-                        taskRecordIDs[task.id] = taskRecord.recordID.recordName
-                    }
+                // 4. Create CKShare for the zone (readWrite for anyone with link)
+                let share = try await CloudKitService.shared.createZoneShare(in: zone.zoneID)
 
-                    // Create invitation record for lookup
-                    _ = try await CloudKitService.shared.createInvitation(
+                // 5. Create invitation in PUBLIC DB with zone metadata (no cross-DB reference)
+                if let shareURL = share.url {
+                    _ = try await CloudKitService.shared.createInvitationForZone(
                         code: code,
-                        listRecordID: record.recordID
+                        shareURL: shareURL.absoluteString,
+                        zoneName: zoneName,
+                        zoneOwnerName: zone.zoneID.ownerName
                     )
+                }
 
-                    // Update local list with cloud record ID and task cloudRecordIDs
-                    await MainActor.run {
-                        var updatedList = list
-                        updatedList.cloudRecordID = record.recordID.recordName
-                        for i in updatedList.tasks.indices {
-                            updatedList.tasks[i].cloudRecordID = taskRecordIDs[updatedList.tasks[i].id]
-                        }
-                        listsViewModel.updateList(updatedList)
-                        inviteCode = code
-                        isSharing = false
+                // 7. Update local list with zone metadata
+                await MainActor.run {
+                    list.cloudRecordID = record.recordID.recordName
+                    list.zoneID = zoneName
+                    list.zoneOwnerName = zone.zoneID.ownerName
+                    list.shareRecordName = share.recordID.recordName
+                    list.shareURL = share.url?.absoluteString
+                    list.isMigratedToPrivateDB = true
+                    for i in list.tasks.indices {
+                        list.tasks[i].cloudRecordID = taskRecordIDs[list.tasks[i].id]
                     }
+                    listsViewModel.updateList(list)
+                    inviteCode = code
+                    isSharing = false
                 }
             } catch {
                 await MainActor.run {
                     isSharing = false
                     errorMessage = "Saved locally. CloudKit sync failed: \(error.localizedDescription)"
-                    // Still show the code even if CloudKit fails
                     inviteCode = code
                 }
             }

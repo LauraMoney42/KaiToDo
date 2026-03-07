@@ -7,6 +7,7 @@ actor CloudKitService {
     private let container: CKContainer
     private let privateDatabase: CKDatabase
     private let publicDatabase: CKDatabase
+    private let sharedDatabase: CKDatabase
 
     // Record Types
     private let sharedListType = "SharedList"
@@ -18,6 +19,7 @@ actor CloudKitService {
         container = CKContainer(identifier: "iCloud.com.kaitodo.app")
         privateDatabase = container.privateCloudDatabase
         publicDatabase = container.publicCloudDatabase
+        sharedDatabase = container.sharedCloudDatabase
     }
 
     // MARK: - Account Status
@@ -57,6 +59,7 @@ actor CloudKitService {
         taskRecord["completedBy"] = "_init"
         taskRecord["completedByName"] = "_init"
         taskRecord["completedAt"] = Date()
+        taskRecord["sortOrder"] = 0.0 as Double
 
         let savedTask = try await publicDatabase.save(taskRecord)
         print("✓ SharedTask schema created")
@@ -208,6 +211,7 @@ actor CloudKitService {
                 existingRecord["completedBy"] = task.completedBy
                 existingRecord["completedByName"] = task.completedByName
                 existingRecord["completedAt"] = task.completedAt
+                existingRecord["sortOrder"] = task.sortOrder ?? 0.0
                 return try await publicDatabase.save(existingRecord)
             } catch {
                 // Permission denied — we're a participant, not the creator.
@@ -222,6 +226,7 @@ actor CloudKitService {
                 replacement["completedBy"] = task.completedBy
                 replacement["completedByName"] = task.completedByName
                 replacement["completedAt"] = task.completedAt
+                replacement["sortOrder"] = task.sortOrder ?? 0.0
                 replacement["replacesRecord"] = existingRecordName  // link to orphan for cleanup
                 return try await publicDatabase.save(replacement)
             }
@@ -234,6 +239,7 @@ actor CloudKitService {
             record["completedBy"] = task.completedBy
             record["completedByName"] = task.completedByName
             record["completedAt"] = task.completedAt
+            record["sortOrder"] = task.sortOrder ?? 0.0
             return try await publicDatabase.save(record)
         }
     }
@@ -275,7 +281,8 @@ actor CloudKitService {
                 completedByName: record["completedByName"] as? String,
                 completedAt: record["completedAt"] as? Date,
                 createdAt: record.creationDate ?? Date(),
-                modifiedAt: record.modificationDate ?? Date()
+                modifiedAt: record.modificationDate ?? Date(),
+                sortOrder: record["sortOrder"] as? Double
             )
             tasks.append(task)
         }
@@ -298,6 +305,7 @@ actor CloudKitService {
         record["completedBy"] = task.completedBy
         record["completedByName"] = task.completedByName
         record["completedAt"] = task.completedAt
+        record["sortOrder"] = task.sortOrder ?? 0.0
 
         try await publicDatabase.save(record)
     }
@@ -308,11 +316,26 @@ actor CloudKitService {
 
     // MARK: - Invitations
 
+    /// Legacy: Create invitation with a CKRecord.Reference (public DB only — both records must be in same DB).
     func createInvitation(code: String, listRecordID: CKRecord.ID) async throws -> CKRecord {
         let record = CKRecord(recordType: invitationType)
         record["code"] = code
         record["listID"] = CKRecord.Reference(recordID: listRecordID, action: .deleteSelf)
         record["createdAt"] = Date()
+
+        return try await publicDatabase.save(record)
+    }
+
+    /// Phase 2: Create invitation with zone metadata as strings (no cross-database reference).
+    /// The invitation lives in public DB but points to a zone in the owner's private DB.
+    func createInvitationForZone(code: String, shareURL: String, zoneName: String, zoneOwnerName: String) async throws -> CKRecord {
+        let record = CKRecord(recordType: invitationType)
+        record["code"] = code
+        record["createdAt"] = Date()
+        record["shareURL"] = shareURL
+        record["zoneName"] = zoneName
+        record["zoneOwnerName"] = zoneOwnerName
+        record["migratedToPrivateDB"] = 1 as Int64
 
         return try await publicDatabase.save(record)
     }
@@ -376,5 +399,375 @@ actor CloudKitService {
         participants.removeAll { $0 == userID }
         listRecord["participants"] = participants
         try await publicDatabase.save(listRecord)
+    }
+
+    // MARK: - CKShare + Private DB (Phase 2)
+    // Zone-level sharing: each shared list gets its own custom zone in the owner's
+    // private DB. A CKShare grants participants readWrite access via their shared DB.
+    // This eliminates the replacement record workaround — all participants can modify
+    // any record in the shared zone directly.
+
+    /// Determine which database to use for a given zone based on ownership.
+    func database(for zoneID: CKRecordZone.ID) -> CKDatabase {
+        if zoneID.ownerName == CKCurrentUserDefaultName {
+            return privateDatabase
+        } else {
+            return sharedDatabase
+        }
+    }
+
+    /// Create a custom zone for a shared list (owner only).
+    func createZone(named zoneName: String) async throws -> CKRecordZone {
+        let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: CKCurrentUserDefaultName)
+        let zone = CKRecordZone(zoneID: zoneID)
+        return try await privateDatabase.save(zone)
+    }
+
+    /// Create a CKShare for zone-level sharing (owner only).
+    /// Returns the saved CKShare with its URL for participant acceptance.
+    func createZoneShare(in zoneID: CKRecordZone.ID) async throws -> CKShare {
+        let share = CKShare(recordZoneID: zoneID)
+        share[CKShare.SystemFieldKey.title] = "KaiToDo Shared List"
+        share.publicPermission = .readWrite  // anyone with the link can join
+
+        let saved = try await privateDatabase.save(share)
+        guard let savedShare = saved as? CKShare else {
+            throw CloudKitSyncError.shareCreationFailed
+        }
+        return savedShare
+    }
+
+    /// Accept a CKShare by its URL. After acceptance, the shared zone appears
+    /// in the participant's sharedCloudDatabase.
+    func acceptShare(url: URL) async throws {
+        // Step 1: Fetch share metadata from the URL
+        let metadata = try await fetchShareMetadata(url: url)
+
+        // Step 2: Accept the share
+        try await acceptShareMetadata(metadata)
+    }
+
+    private func fetchShareMetadata(url: URL) async throws -> CKShare.Metadata {
+        try await withCheckedThrowingContinuation { continuation in
+            let operation = CKFetchShareMetadataOperation(shareURLs: [url])
+            var fetchedMetadata: CKShare.Metadata?
+
+            operation.perShareMetadataResultBlock = { _, result in
+                switch result {
+                case .success(let metadata):
+                    fetchedMetadata = metadata
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+
+            operation.fetchShareMetadataResultBlock = { result in
+                switch result {
+                case .success:
+                    if let metadata = fetchedMetadata {
+                        continuation.resume(returning: metadata)
+                    } else {
+                        continuation.resume(throwing: CloudKitSyncError.shareCreationFailed)
+                    }
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+
+            container.add(operation)
+        }
+    }
+
+    private func acceptShareMetadata(_ metadata: CKShare.Metadata) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let operation = CKAcceptSharesOperation(shareMetadatas: [metadata])
+
+            operation.perShareResultBlock = { _, result in
+                switch result {
+                case .success:
+                    break
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                    return
+                }
+            }
+
+            operation.acceptSharesResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+
+            container.add(operation)
+        }
+    }
+
+    /// Save a SharedList record into a custom zone (private or shared DB).
+    func saveSharedListInZone(_ list: TodoList, ownerID: String, ownerName: String, zoneID: CKRecordZone.ID) async throws -> CKRecord {
+        let db = database(for: zoneID)
+        let recordID: CKRecord.ID
+        if let existing = list.cloudRecordID {
+            recordID = CKRecord.ID(recordName: existing, zoneID: zoneID)
+        } else {
+            recordID = CKRecord.ID(zoneID: zoneID)
+        }
+        let record = CKRecord(recordType: sharedListType, recordID: recordID)
+        record["name"] = list.name
+        record["color"] = list.color
+        record["ownerID"] = ownerID
+        record["ownerName"] = ownerName
+        record["inviteCode"] = list.inviteCode
+        record["starCount"] = Int64(list.starCount)
+        record["starGoal"] = list.starGoal.map { Int64($0) }
+        record["rewardText"] = list.rewardText
+        record["rewardGiven"] = list.rewardGiven ? 1 : 0 as Int64
+        return try await db.save(record)
+    }
+
+    /// Save a task record into a custom zone. No replacement record pattern needed —
+    /// CKShare gives all participants readWrite access.
+    func saveTaskInZone(_ task: TodoTask, listRecordID: CKRecord.ID, zoneID: CKRecordZone.ID) async throws -> CKRecord {
+        let db = database(for: zoneID)
+        let recordID: CKRecord.ID
+        if let existingName = task.cloudRecordID {
+            recordID = CKRecord.ID(recordName: existingName, zoneID: zoneID)
+            // Fetch and update existing record
+            let existing = try await db.record(for: recordID)
+            existing["text"] = task.text
+            existing["isCompleted"] = task.isCompleted ? 1 : 0
+            existing["completedBy"] = task.completedBy
+            existing["completedByName"] = task.completedByName
+            existing["completedAt"] = task.completedAt
+            existing["sortOrder"] = task.sortOrder ?? 0.0
+            return try await db.save(existing)
+        } else {
+            // New task — create in zone
+            recordID = CKRecord.ID(zoneID: zoneID)
+            let record = CKRecord(recordType: sharedTaskType, recordID: recordID)
+            record["listID"] = CKRecord.Reference(recordID: listRecordID, action: .deleteSelf)
+            record["text"] = task.text
+            record["isCompleted"] = task.isCompleted ? 1 : 0
+            record["completedBy"] = task.completedBy
+            record["completedByName"] = task.completedByName
+            record["completedAt"] = task.completedAt
+            record["sortOrder"] = task.sortOrder ?? 0.0
+            return try await db.save(record)
+        }
+    }
+
+    /// Fetch all tasks in a custom zone. No dedup/replacement logic needed.
+    func fetchTasksInZone(_ zoneID: CKRecordZone.ID) async throws -> [TodoTask] {
+        let db = database(for: zoneID)
+        let query = CKQuery(recordType: sharedTaskType, predicate: NSPredicate(value: true))
+        let (results, _) = try await db.records(matching: query, inZoneWith: zoneID)
+
+        var tasks: [TodoTask] = []
+        for (_, result) in results {
+            if case .success(let record) = result {
+                let task = TodoTask(
+                    id: UUID(),
+                    cloudRecordID: record.recordID.recordName,
+                    text: record["text"] as? String ?? "",
+                    isCompleted: (record["isCompleted"] as? Int64 ?? 0) == 1,
+                    completedBy: record["completedBy"] as? String,
+                    completedByName: record["completedByName"] as? String,
+                    completedAt: record["completedAt"] as? Date,
+                    createdAt: record.creationDate ?? Date(),
+                    modifiedAt: record.modificationDate ?? Date(),
+                    sortOrder: record["sortOrder"] as? Double
+                )
+                tasks.append(task)
+            }
+        }
+        return tasks
+    }
+
+    /// Fetch star/reward data from a SharedList record in a custom zone.
+    func fetchListStarDataInZone(_ zoneID: CKRecordZone.ID, cloudRecordID: String) async throws -> (starCount: Int, starGoal: Int?, rewardText: String?, rewardGiven: Bool) {
+        let db = database(for: zoneID)
+        let recordID = CKRecord.ID(recordName: cloudRecordID, zoneID: zoneID)
+        let record = try await db.record(for: recordID)
+        let starCount = (record["starCount"] as? Int64).map(Int.init) ?? 0
+        let starGoal = (record["starGoal"] as? Int64).map(Int.init)
+        let rewardText = record["rewardText"] as? String
+        let rewardGiven = (record["rewardGiven"] as? Int64 ?? 0) == 1
+        return (starCount, starGoal, rewardText, rewardGiven)
+    }
+
+    /// Update star/reward data in a custom zone. Any participant can write (CKShare readWrite).
+    func updateListStarDataInZone(_ zoneID: CKRecordZone.ID, cloudRecordID: String, starCount: Int, starGoal: Int?, rewardText: String?, rewardGiven: Bool) async throws {
+        let db = database(for: zoneID)
+        let recordID = CKRecord.ID(recordName: cloudRecordID, zoneID: zoneID)
+        let record = try await db.record(for: recordID)
+        record["starCount"] = Int64(starCount)
+        record["starGoal"] = starGoal.map { Int64($0) }
+        record["rewardText"] = rewardText
+        record["rewardGiven"] = rewardGiven ? 1 : 0 as Int64
+        try await db.save(record)
+    }
+
+    /// Delete a task in a custom zone.
+    func deleteTaskInZone(_ recordID: CKRecord.ID, zoneID: CKRecordZone.ID) async throws {
+        let db = database(for: zoneID)
+        try await db.deleteRecord(withID: recordID)
+    }
+
+    /// Update the Invitation record in public DB with CKShare metadata so
+    /// participants can find and accept the share when they enter the invite code.
+    func updateInvitationWithShareURL(code: String, shareURL: String, zoneName: String, zoneOwnerName: String) async throws {
+        guard let invitation = try await findInvitation(byCode: code) else { return }
+        invitation["shareURL"] = shareURL
+        invitation["zoneName"] = zoneName
+        invitation["zoneOwnerName"] = zoneOwnerName
+        invitation["migratedToPrivateDB"] = 1 as Int64
+        try await publicDatabase.save(invitation)
+    }
+
+    // MARK: - Database Subscriptions (Phase 2)
+    // CKDatabaseSubscription monitors ALL custom zones for changes — required
+    // because CKQuerySubscription doesn't work on the shared database.
+
+    func setupDatabaseSubscriptions() async throws {
+        let notification = CKSubscription.NotificationInfo()
+        notification.shouldSendContentAvailable = true
+
+        // Private DB subscription (for lists we own)
+        let privateSub = CKDatabaseSubscription(subscriptionID: "private-db-changes")
+        privateSub.notificationInfo = notification
+        try await privateDatabase.save(privateSub)
+
+        // Shared DB subscription (for lists others shared with us)
+        let sharedSub = CKDatabaseSubscription(subscriptionID: "shared-db-changes")
+        sharedSub.notificationInfo = notification
+        try await sharedDatabase.save(sharedSub)
+    }
+
+    // MARK: - Delta Sync (Phase 3)
+    // Fetch only records that changed since the last sync using change tokens.
+
+    struct ZoneChanges {
+        var changedRecords: [CKRecord]
+        var deletedRecordIDs: [CKRecord.ID]
+        var newChangeToken: CKServerChangeToken?
+        var hasMoreChanges: Bool
+    }
+
+    struct DatabaseChanges {
+        var changedZoneIDs: [CKRecordZone.ID]
+        var deletedZoneIDs: [CKRecordZone.ID]
+        var newChangeToken: CKServerChangeToken?
+    }
+
+    /// Fetch records that changed in a zone since the given token.
+    /// Pass nil for initial full fetch; returns a new token for subsequent delta syncs.
+    func fetchZoneChanges(zoneID: CKRecordZone.ID, since token: CKServerChangeToken?) async throws -> ZoneChanges {
+        let db = database(for: zoneID)
+        let config = CKFetchRecordZoneChangesOperation.ZoneConfiguration()
+        config.previousServerChangeToken = token
+
+        var changedRecords: [CKRecord] = []
+        var deletedIDs: [CKRecord.ID] = []
+        var newToken: CKServerChangeToken?
+        var moreComing = false
+
+        let operation = CKFetchRecordZoneChangesOperation(
+            recordZoneIDs: [zoneID],
+            configurationsByRecordZoneID: [zoneID: config]
+        )
+
+        operation.recordWasChangedBlock = { _, result in
+            if case .success(let record) = result {
+                changedRecords.append(record)
+            }
+        }
+
+        operation.recordWithIDWasDeletedBlock = { recordID, _ in
+            deletedIDs.append(recordID)
+        }
+
+        operation.recordZoneChangeTokensUpdatedBlock = { _, serverToken, _ in
+            newToken = serverToken
+        }
+
+        operation.recordZoneFetchResultBlock = { _, result in
+            if case .success(let (serverToken, _, moreToCome)) = result {
+                newToken = serverToken
+                moreComing = moreToCome
+            }
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            operation.fetchRecordZoneChangesResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume(returning: ZoneChanges(
+                        changedRecords: changedRecords,
+                        deletedRecordIDs: deletedIDs,
+                        newChangeToken: newToken,
+                        hasMoreChanges: moreComing
+                    ))
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+            db.add(operation)
+        }
+    }
+
+    /// Fetch which zones changed in a database since the given token.
+    func fetchDatabaseChanges(in db: CKDatabase, since token: CKServerChangeToken?) async throws -> DatabaseChanges {
+        var changedZoneIDs: [CKRecordZone.ID] = []
+        var deletedZoneIDs: [CKRecordZone.ID] = []
+        var newToken: CKServerChangeToken?
+
+        let operation = CKFetchDatabaseChangesOperation(previousServerChangeToken: token)
+
+        operation.recordZoneWithIDChangedBlock = { zoneID in
+            changedZoneIDs.append(zoneID)
+        }
+
+        operation.recordZoneWithIDWasDeletedBlock = { zoneID in
+            deletedZoneIDs.append(zoneID)
+        }
+
+        operation.changeTokenUpdatedBlock = { serverToken in
+            newToken = serverToken
+        }
+
+        return try await withCheckedThrowingContinuation { continuation in
+            operation.fetchDatabaseChangesResultBlock = { result in
+                switch result {
+                case .success(let (serverToken, _)):
+                    newToken = serverToken
+                    continuation.resume(returning: DatabaseChanges(
+                        changedZoneIDs: changedZoneIDs,
+                        deletedZoneIDs: deletedZoneIDs,
+                        newChangeToken: newToken
+                    ))
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+            db.add(operation)
+        }
+    }
+}
+
+// MARK: - Error Types
+
+enum CloudKitSyncError: LocalizedError {
+    case shareCreationFailed
+    case participantNotFound
+    case migrationFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .shareCreationFailed: return "Failed to create CloudKit share"
+        case .participantNotFound: return "Participant not found"
+        case .migrationFailed(let reason): return "Migration failed: \(reason)"
+        }
     }
 }

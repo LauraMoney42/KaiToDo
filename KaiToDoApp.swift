@@ -16,7 +16,10 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         application.registerForRemoteNotifications()
         // Set up CloudKit subscriptions (idempotent — CloudKit ignores duplicate subscription IDs)
         Task {
+            // Legacy public DB subscriptions (for pre-migration lists)
             try? await CloudKitService.shared.setupSubscriptions()
+            // Phase 2: Database-level subscriptions for private + shared DBs
+            try? await CloudKitService.shared.setupDatabaseSubscriptions()
         }
         return true
     }
@@ -27,20 +30,30 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     /// CloudKit silent push — content-available:1, no alert/sound/badge.
     /// Parse as CKNotification; if valid, post local notification so ListsViewModel syncs.
+    /// Handles both CKQueryNotification (legacy public DB) and CKDatabaseNotification (Phase 2).
     func application(
         _ application: UIApplication,
         didReceiveRemoteNotification userInfo: [AnyHashable: Any],
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
         guard let dict = userInfo as? [String: NSObject],
-              let ckNotification = CKNotification(fromRemoteNotificationDictionary: dict),
-              ckNotification.notificationType == .query else {
+              let ckNotification = CKNotification(fromRemoteNotificationDictionary: dict) else {
             completionHandler(.noData)
             return
         }
-        // Broadcast to any listening ListsViewModel instances
-        NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
-        completionHandler(.newData)
+
+        switch ckNotification.notificationType {
+        case .query:
+            // Legacy public DB subscription
+            NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
+            completionHandler(.newData)
+        case .database:
+            // Phase 2: CKDatabaseSubscription — private or shared DB changed
+            NotificationCenter.default.post(name: .cloudKitDataChanged, object: nil)
+            completionHandler(.newData)
+        default:
+            completionHandler(.noData)
+        }
     }
 }
 
