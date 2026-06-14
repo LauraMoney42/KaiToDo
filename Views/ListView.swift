@@ -13,6 +13,8 @@ struct ListView: View {
     @State private var editedTitle = ""
     @State private var keyboardVisible = false      // driven by UIKit notifications — instant
     @State private var seenCompletedTrigger = 0    // snapshot on appear — only fire confetti on NEW completions
+    // gs-task-005: Goal-reached banner — shown when starCount hits starGoal
+    @State private var showGoalReachedBanner = false
     @FocusState private var isInputFocused: Bool
     @FocusState private var isTitleFocused: Bool
 
@@ -41,6 +43,36 @@ struct ListView: View {
                             emptyTasksView(accentColor: Color(hex: list.color))
                         } else {
                             List {
+                                // ⭐ Goal progress card — pinned at top of task list
+                                // when creator has set a star goal and reward isn't yet given.
+                                if let goal = list.starGoal, !list.rewardGiven {
+                                    Section {
+                                        StarProgressCard(list: list, goal: goal)
+                                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                            .listRowSeparator(.hidden)
+                                            .onTapGesture {
+                                                showingStarGoalSheet = true
+                                            }
+                                        // gs-task-005: "Mark reward given ✅" — shown when goal is reached
+                                        if list.starCount >= goal {
+                                            Button {
+                                                listsViewModel.markRewardGiven(listID: list.id)
+                                            } label: {
+                                                Label("Mark reward given ✅", systemImage: "checkmark.seal.fill")
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundStyle(.white)
+                                                    .frame(maxWidth: .infinity)
+                                                    .padding(.vertical, 8)
+                                                    .background(Color(hex: "34d399"))
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                                            }
+                                            .buttonStyle(.plain)
+                                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+                                            .listRowSeparator(.hidden)
+                                        }
+                                    }
+                                }
+
                                 ForEach(list.tasks) { task in
                                     TaskRow(
                                         task: task,
@@ -260,6 +292,29 @@ struct ListView: View {
             // ⭐ Gold Star celebration — layered over confetti, non-blocking
             if listsViewModel.listCompletedTrigger > seenCompletedTrigger {
                 GoldStarCelebrationOverlay(trigger: listsViewModel.listCompletedTrigger)
+            }
+        }
+        .overlay(alignment: .top) {
+            // gs-task-005: Goal-reached celebration banner
+            if showGoalReachedBanner, let list = list {
+                GoalReachedBanner(rewardText: list.rewardText) {
+                    withAnimation(.easeOut(duration: 0.3)) { showGoalReachedBanner = false }
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(10)
+            }
+        }
+        // gs-task-005: Detect goal reached — fires once when starCount == starGoal
+        .onChange(of: list?.starCount) { _, newCount in
+            guard let newCount,
+                  let goal = list?.starGoal,
+                  newCount == goal,
+                  list?.rewardGiven == false else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                showGoalReachedBanner = true
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                withAnimation(.easeOut(duration: 0.3)) { showGoalReachedBanner = false }
             }
         }
         .onAppear {
@@ -489,6 +544,57 @@ struct GoldStarCelebrationOverlay: View {
                 glowRadius = 0
             }
         }
+    }
+}
+
+// MARK: - Goal Reached Banner
+// gs-task-005: In-app celebration banner — slides in from top when starCount hits starGoal.
+// Auto-dismisses after 5 seconds; dismiss button exits immediately.
+
+private struct GoalReachedBanner: View {
+    let rewardText: String?
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("⭐")
+                .font(.title2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Goal Reached!")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                if let reward = rewardText, !reward.isEmpty {
+                    Text("Time for: \(reward) 🎉")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.9))
+                } else {
+                    Text("Amazing work! 🎉")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.9))
+                }
+            }
+            Spacer()
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(6)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(
+            LinearGradient(
+                colors: [Color(hex: "34d399"), Color(hex: "059669")],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color(hex: "34d399").opacity(0.4), radius: 12, y: 4)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 }
 

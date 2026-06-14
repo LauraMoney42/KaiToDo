@@ -63,6 +63,9 @@ extension Notification.Name {
     /// Posted by ListsViewModel when a list completes and a ⭐ is earned.
     /// userInfo: ["listID": UUID]
     static let starEarned = Notification.Name("starEarned")
+    /// Posted by ListsViewModel when starCount first reaches starGoal.
+    /// Triggers confetti + celebration UI. Fired once per goal cycle (guard: rewardGiven).
+    static let goalReached = Notification.Name("goalReached")
 }
 
 // MARK: - Invite Code Item

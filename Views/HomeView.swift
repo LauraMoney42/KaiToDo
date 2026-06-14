@@ -14,6 +14,9 @@ struct HomeView: View {
     @State private var flyingStarVisible = false  // triggers fly-up animation on star earned
     @State private var flyingStarOffset: CGFloat = 0
 
+    // 🎉 Goal reached confetti — incremented by goalReached NC notification, triggers ConfettiCannon
+    @State private var confettiTrigger = 0
+
     private var totalStars: Int {
         listsViewModel.lists.reduce(0) { $0 + $1.starCount }
     }
@@ -66,9 +69,10 @@ struct HomeView: View {
 
                             // MARK: — Reward Progress Cards (Option A)
                             // Shows a card for each list with an active star goal.
-                            // Kids see exactly how close they are to their reward.
+                            // Includes rewardGiven = true (goal reached) cards so parent can
+                            // see the "Give Reward!" prompt and mark it as given.
                             ForEach(listsViewModel.lists.filter {
-                                $0.starGoal != nil && !$0.rewardGiven
+                                $0.starGoal != nil
                             }) { list in
                                 if let goal = list.starGoal {
                                     HomeRewardCard(list: list, goal: goal)
@@ -134,6 +138,24 @@ struct HomeView: View {
                     flyingStarOffset = 0
                 }
             }
+            // gs-task-005: Fire confetti when a star goal is reached (rewardGiven just became true).
+            .onReceive(NotificationCenter.default.publisher(for: .goalReached)) { _ in
+                confettiTrigger += 1
+            }
+            .confettiCannon(
+                trigger: $confettiTrigger,
+                num: 60,
+                confettis: [.shape(.circle), .shape(.triangle), .shape(.square), .text("⭐"), .text("🎉")],
+                colors: [.purple, Color(hex: "FFB800"), .green, .orange, .pink, .blue],
+                confettiSize: 14,
+                rainHeight: 700,
+                openingAngle: .degrees(50),
+                closingAngle: .degrees(130),
+                radius: 350,
+                repetitions: 2,
+                repetitionInterval: 0.8,
+                hapticFeedback: true
+            )
             .sheet(isPresented: $showingNewListSheet) {
                 NewListSheet()
             }
@@ -258,28 +280,33 @@ struct StarBreakdownSheet: View {
                                 StarProgressCard(list: list, goal: goal)
                                     .padding(.vertical, 2)
 
-                                // Show button when goal reached and reward not yet given
-                                if list.starCount >= goal && !list.rewardGiven {
-                                    Button {
-                                        listsViewModel.markRewardGiven(listID: list.id)
-                                    } label: {
-                                        Label("Mark reward given", systemImage: "checkmark.seal.fill")
-                                            .font(.subheadline.weight(.semibold))
-                                            .foregroundStyle(.white)
-                                            .frame(maxWidth: .infinity)
-                                            .padding(.vertical, 8)
-                                            .background(Color(hex: "34d399"))
-                                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                                // gs-task-005: rewardGiven = true means goal was reached and
+                                // notification/confetti fired. Show the "Give Reward!" button
+                                // so parent can mark it as physically given → resets cycle.
+                                if list.rewardGiven {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        if let reward = list.rewardText, !reward.isEmpty {
+                                            Text("🎉 Goal reached! Give them: \(reward)")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(Color(hex: "34d399"))
+                                        } else {
+                                            Text("🎉 Goal reached!")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(Color(hex: "34d399"))
+                                        }
+                                        Button {
+                                            listsViewModel.markRewardGiven(listID: list.id)
+                                        } label: {
+                                            Label("I gave the reward! ✓", systemImage: "checkmark.seal.fill")
+                                                .font(.subheadline.weight(.semibold))
+                                                .foregroundStyle(.white)
+                                                .frame(maxWidth: .infinity)
+                                                .padding(.vertical, 8)
+                                                .background(Color(hex: "34d399"))
+                                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        }
+                                        .buttonStyle(.plain)
                                     }
-                                    .buttonStyle(.plain)
-                                } else if list.rewardGiven {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "checkmark.seal.fill")
-                                            .font(.caption)
-                                        Text("Reward given ✓")
-                                            .font(.caption)
-                                    }
-                                    .foregroundStyle(Color(hex: "34d399"))
                                 }
                             }
                         } else {

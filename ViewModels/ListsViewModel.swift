@@ -139,27 +139,96 @@ class ListsViewModel {
         }
     }
 
-    /// Call after incrementing starCount — fires push notification if goal just reached.
+    /// Call after incrementing starCount — fires push notification + confetti if goal just reached.
     /// Guards against repeat: only fires when starCount == starGoal exactly and !rewardGiven.
+    /// Sets rewardGiven = true after firing so the notification + confetti only trigger once per cycle.
+    /// Parent resets the cycle via markRewardGiven() → starCount = 0, rewardGiven = false.
     func checkGoalReached(for listID: UUID) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
         let list = lists[index]
         guard let goal = list.starGoal,
               list.starCount == goal,
               !list.rewardGiven else { return }
+
+        // gs-task-005: Mark goal reached — prevents repeat notification/confetti on this cycle.
+        lists[index].rewardGiven = true
+        saveLists()
+
+        // Sync rewardGiven = true to CloudKit so other devices (parent's phone) see the state.
+        let updated = lists[index]
+        if updated.isShared, let cloudRecordID = updated.cloudRecordID {
+            if updated.isMigratedToPrivateDB,
+               let zoneName = updated.zoneID,
+               let ownerName = updated.zoneOwnerName {
+                let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: ownerName)
+                let snap = (updated.starCount, updated.starGoal, updated.rewardText, updated.rewardGiven)
+                Task {
+                    try? await CloudKitService.shared.updateListStarDataInZone(
+                        zoneID, cloudRecordID: cloudRecordID,
+                        starCount: snap.0, starGoal: snap.1,
+                        rewardText: snap.2, rewardGiven: snap.3
+                    )
+                }
+            } else if updated.shareType == .owned {
+                let snap = (updated.starCount, updated.starGoal, updated.rewardText, updated.rewardGiven)
+                Task {
+                    try? await CloudKitService.shared.updateListStarData(
+                        cloudRecordID: cloudRecordID,
+                        starCount: snap.0, starGoal: snap.1,
+                        rewardText: snap.2, rewardGiven: snap.3
+                    )
+                }
+            }
+        }
+
+        // Schedule local push notification
         Task {
             try? await NotificationService.shared.scheduleGoalReachedNotification(
                 listName: list.name,
                 rewardText: list.rewardText
             )
         }
+
+        // Post NC event so HomeView confetti cannon fires
+        NotificationCenter.default.post(name: .goalReached, object: nil)
     }
 
-    /// Mark the reward as physically given — hides the "Mark reward given" button until next goal cycle.
+    /// Mark the reward as physically given — resets starCount to 0 for the next goal cycle.
+    /// Keeps starGoal and rewardText so the next cycle starts immediately.
+    /// gs-task-005: Added starCount reset + CloudKit sync.
     func markRewardGiven(listID: UUID) {
         guard let index = lists.firstIndex(where: { $0.id == listID }) else { return }
-        lists[index].rewardGiven = true
+        // Reset for next cycle — keep goal + reward, zero the star count
+        lists[index].starCount = 0
+        lists[index].rewardGiven = false
         saveLists()
+
+        // Sync reset to CloudKit (mirrors awardStar sync pattern)
+        let list = lists[index]
+        guard list.isShared, let cloudRecordID = list.cloudRecordID else { return }
+        if list.isMigratedToPrivateDB,
+           let zoneName = list.zoneID,
+           let ownerName = list.zoneOwnerName {
+            let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: ownerName)
+            let snapshot = (list.starCount, list.starGoal, list.rewardText, list.rewardGiven)
+            Task {
+                try? await CloudKitService.shared.updateListStarDataInZone(
+                    zoneID, cloudRecordID: cloudRecordID,
+                    starCount: snapshot.0, starGoal: snapshot.1,
+                    rewardText: snapshot.2, rewardGiven: snapshot.3
+                )
+            }
+        } else {
+            guard list.shareType == .owned else { return }
+            let snapshot = (list.starCount, list.starGoal, list.rewardText, list.rewardGiven)
+            Task {
+                try? await CloudKitService.shared.updateListStarData(
+                    cloudRecordID: cloudRecordID,
+                    starCount: snapshot.0, starGoal: snapshot.1,
+                    rewardText: snapshot.2, rewardGiven: snapshot.3
+                )
+            }
+        }
     }
 
     func deleteList(_ list: TodoList) {
@@ -767,6 +836,10 @@ class ListsViewModel {
         lists[listIndex].starCount += 1
         saveLists()
         NotificationCenter.default.post(name: .starEarned, object: nil)
+
+        // gs-task-005: Fire push notification if goal was just reached
+        let listID = lists[listIndex].id
+        checkGoalReached(for: listID)
 
         let list = lists[listIndex]
         guard list.isShared, let cloudRecordID = list.cloudRecordID else { return }
